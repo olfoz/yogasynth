@@ -40,7 +40,15 @@ const MODULI = [
 const CLASSICI = ['js/schermoView.js'];
 
 // pagine di cui controllare gli script scritti dentro
-const PAGINE = ['index.html', 'schermo.html'];
+// Anche i banchi: un apostrofo dentro apici singoli li rende muti esattamente
+// come le pagine dell'app, e li' l'errore si nota ancora meno perche' li
+// guarda solo chi sta sviluppando.
+const PAGINE = [
+    'index.html', 'schermo.html',
+    'tools/banco-rete.html', 'tools/banco-peer.html', 'tools/banco-qr.html',
+    'tools/banco-schermo.html', 'tools/banco-intro.html', 'tools/banco-avatar.html',
+    'tools/banco-logica.html', 'tools/banco-app.html'
+];
 
 const L = [];
 const out = () => { document.getElementById('o').innerHTML = L.join('\n'); };

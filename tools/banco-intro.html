@@ -26,8 +26,8 @@
 // ?view=side ruota di 90 gradi, per controllare la profondita' del gesto.
 
 const THREE = await import('three');
-const { GuideAvatar } = await import('/js/render/avatar.js?v=' + Date.now());
-const { PoseClip } = await import('/js/poseClip.js?v=' + Date.now());
+const { GuideAvatar } = await import('../js/render/avatar.js?v=' + Date.now());
+const { PoseClip } = await import('../js/poseClip.js?v=' + Date.now());
 
 const COLS = 6;
 const CELL_W = 260, CELL_H = 420;
@@ -52,11 +52,11 @@ const camera = new THREE.OrthographicCamera(0, aspect, 1, 0, -20, 20);
 camera.position.set(0, 0, 10);
 
 const avatar = new GuideAvatar(scene);
-await avatar.load('/avatars/nathan.fbx');
+await avatar.load('../avatars/nathan.fbx');
 avatar.visible = true;
 avatar.setOpacity(1);
 
-const clip = await PoseClip.load('/data/intro-sukhasana.json?v=' + Date.now());
+const clip = await PoseClip.load('../data/intro-sukhasana.json?v=' + Date.now());
 
 // inquadratura fissata una volta, come fa Intro
 avatar.placeCentered({ cx: aspect / 2, cy: 0.5, w: aspect, h: 1 });

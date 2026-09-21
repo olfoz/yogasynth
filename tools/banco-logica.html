@@ -7,21 +7,21 @@
 const log=[];const ok=(m)=>log.push('OK   '+m);const bad=(m)=>log.push('FAIL '+m);
 window.onerror=e=>{log.push('ERROR '+e);document.getElementById('out').textContent=log.join('\n');};
 try{
-  const T=await import('/js/music/theory.js');
-  const R=await import('/js/pose/rays.js');
-  const S=await import('/js/sequence.js');
-  await import('/js/fps.js');
-  await import('/js/music/synth.js');
-  await import('/js/render/stage.js');
-  await import('/js/render/raysView.js');
-  await import('/js/render/glowBody.js');
-  await import('/js/render/avatar.js');
-  await import('/js/render/hud.js');
-  await import('/js/pose/tracker.js');
-  await import('/js/intro.js');
+  const T=await import('../js/music/theory.js');
+  const R=await import('../js/pose/rays.js');
+  const S=await import('../js/sequence.js');
+  await import('../js/fps.js');
+  await import('../js/music/synth.js');
+  await import('../js/render/stage.js');
+  await import('../js/render/raysView.js');
+  await import('../js/render/glowBody.js');
+  await import('../js/render/avatar.js');
+  await import('../js/render/hud.js');
+  await import('../js/pose/tracker.js');
+  await import('../js/intro.js');
   ok('tutti i moduli importati');
 
-  const data = await (await fetch('/data/asanas.json')).json();
+  const data = await (await fetch('../data/asanas.json')).json();
   ok('asanas.json: '+data.asanas.length+' asana');
 
   const p = new S.Practice(data,{mode:'sequence',sequenceId:'surya-namaskara-a'});
@@ -55,7 +55,7 @@ try{
   if(sBad<sGood-0.25) ok('il punteggio scende con la posa sbagliata'); else bad('punteggio poco sensibile');
 
   // ── inquadratura: zoom e messa a fuoco ──────────────────────────────
-  const { Stage, MAX_ZOOM } = await import('/js/render/stage.js?v='+Date.now());
+  const { Stage, MAX_ZOOM } = await import('../js/render/stage.js?v='+Date.now());
   const box=document.createElement('div'); box.style.cssText='position:fixed;width:1px;height:1px;opacity:0'; document.body.appendChild(box);
   const vid=document.createElement('video'); Object.defineProperty(vid,'videoWidth',{value:1280}); Object.defineProperty(vid,'videoHeight',{value:960});
   const st=new Stage(box,vid);

@@ -56,16 +56,16 @@ const t0 = performance.now();
 const ms = () => (performance.now() - t0).toFixed(0) + 'ms';
 
 try {
-    const { PeerHost, caricaPeerJS, nuovoCodice, caricaIce } = await import('/js/peer.js?v=' + Date.now());
+    const { PeerHost, caricaPeerJS, nuovoCodice, caricaIce } = await import('../js/peer.js?v=' + Date.now());
 
     const soloRelay = /[?&]relay=1/.test(location.search);
     const ice = await caricaIce();
     const conTurn = ice.iceServers.some(s => String(s.urls).indexOf('turn:') === 0);
     dire(soloRelay
-        ? 'modalita' RELAY: obbligo il passaggio dal TURN'
-        : 'modalita' normale: si prende la strada che c'e' (aggiungi ?relay=1 per forzare il TURN)');
+        ? "modalita RELAY: obbligo il passaggio dal TURN"
+        : "modalita normale: si prende la strada che c'e' (aggiungi ?relay=1 per forzare il TURN)");
     if (soloRelay && !conTurn) {
-        no('nessun TURN in data/ice.json: in modalita' relay non puo' funzionare');
+        no("nessun TURN in data/ice.json: in modalita relay non puo' funzionare");
         throw new Error('TURN mancante');
     }
     const config = soloRelay

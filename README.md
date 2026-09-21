@@ -661,7 +661,11 @@ lunghezze).
 
 ## Banchi di prova
 
-Con il server locale acceso (`python tools/serve.py`):
+Con il server locale acceso (`python tools/serve.py`) stanno sotto
+`http://localhost:8941/tools/`. Dal **sito pubblicato** l'indirizzo e' lo
+stesso con il prefisso del sito, per esempio
+`https://TUONOME.github.io/yogasynth/tools/banco-rete.html` — la cartella
+`tools/` fa parte del sito, non e' la radice.
 
 | pagina | cosa verifica |
 |---|---|

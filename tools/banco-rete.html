@@ -91,9 +91,9 @@ fetch('../data/ice.json', { cache: 'no-cache' })
                 tipi.srflx ? ok('STUN raggiungibile (indirizzo pubblico trovato)')
                            : no('STUN non raggiungibile: UDP verso internet bloccato');
                 if (!conTurn) {
-                    say('<span class="wait">-  </span> nessun TURN configurato. Va bene finche' '
-                        + 'una strada diretta esiste; quando non esiste, il collegamento fallisce. '
-                        + 'Per averne uno serve un account gratuito: vedi data/ice.json');
+                    say('<span class="wait">-  </span> nessun TURN configurato. Va bene '
+                        + 'quando una strada diretta esiste; quando non esiste, il collegamento '
+                        + 'fallisce. Per averne uno serve un account gratuito: vedi data/ice.json');
                 } else if (tipi.relay) {
                     ok('TURN raggiungibile: via di scorta anche fra reti diverse');
                 } else {

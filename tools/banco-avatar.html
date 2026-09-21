@@ -7,13 +7,13 @@ const log=[];const out=()=>document.getElementById('out').textContent=log.join('
 window.onerror=e=>{log.push('ERROR '+e);out();};
 try{
 const THREE=await import('three');
-const {GuideAvatar}=await import('/js/render/avatar.js?v='+Date.now());
-const R=await import('/js/pose/rays.js');
-const data=await(await fetch('/data/asanas.json?v='+Date.now())).json();
+const {GuideAvatar}=await import('../js/render/avatar.js?v='+Date.now());
+const R=await import('../js/pose/rays.js');
+const data=await(await fetch('../data/asanas.json?v='+Date.now())).json();
 const scene=new THREE.Scene();
 const av=new GuideAvatar(scene);
 const t0=performance.now();
-await av.load('/avatars/nathan.fbx');
+await av.load('../avatars/nathan.fbx');
 log.push('caricato in '+Math.round(performance.now()-t0)+'ms');
 log.push('skinnedMesh='+!!av.skinnedMesh+' ossa='+av.skinnedMesh.skeleton.bones.length);
 log.push('catene IK: '+Object.keys(av.ikTargets).filter(k=>av.ikTargets[k]).join(', '));
