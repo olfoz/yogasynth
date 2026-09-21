@@ -127,11 +127,7 @@
 
     <div id="panel">
         <div id="panelMsg">Collegamento…</div>
-        <div class="small">
-            Sul computer: <b>python tools/serve.py</b>, apri
-            <b>http://localhost:8941/</b>, premi INIZIA e accendi
-            l'interruttore <b>Telefono</b>.
-        </div>
+        <div class="small" id="panelHint"></div>
         <div class="err" id="panelErr"></div>
 
         <div id="pairing" class="hidden">
@@ -192,6 +188,38 @@
     if (!window.fetch) {
         showPanel('Browser troppo vecchio per questa pagina.', 'manca fetch()');
         return;
+    }
+
+    /*
+     * Il consiglio giusto dipende da dove siamo. Aperta dal sito pubblicato,
+     * dire "avvia python tools/serve.py" e' un consiglio che non si puo'
+     * seguire: li' il ponte non esistera' mai, e va benissimo cosi'.
+     */
+    var inLocale = /^(localhost|127\.|192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.)/
+        .test(location.hostname);
+    document.getElementById('panelHint').innerHTML = inLocale
+        ? 'Sul computer: <b>python tools/serve.py</b>, apri '
+          + '<b>http://localhost:8941/</b>, premi INIZIA e accendi '
+          + "l'interruttore <b>Telefono</b>."
+        : 'Sul computer apri lo stesso sito, premi <b>INIZIA</b> e accendi '
+          + "l'interruttore <b>Telefono</b>: compare un QR da inquadrare.";
+
+    // Server di appoggio per WebRTC: gli stessi che usa il computer.
+    var ICE_MINIMO = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+    var ice = null;
+    function caricaIce() {
+        if (ice) { return Promise.resolve(ice); }
+        return fetch('data/ice.json', { cache: 'no-cache' })
+            .then(function (r) {
+                if (!r.ok) { throw new Error('HTTP ' + r.status); }
+                return r.json();
+            })
+            .then(function (d) {
+                ice = (d.iceServers && d.iceServers.length)
+                    ? { iceServers: d.iceServers } : ICE_MINIMO;
+                return ice;
+            })
+            .catch(function () { ice = ICE_MINIMO; return ice; });
     }
 
     var view = new window.SchermoView(canvas);
@@ -338,7 +366,8 @@
         showPanel('Collegamento diretto a ' + codice + '…');
 
         caricaPeerJS(function () {
-            var peer = new window.Peer(null, { debug: 0 });
+          caricaIce().then(function (config) {
+            var peer = new window.Peer(null, { debug: 0, config: config });
 
             peer.on('open', function () {
                 var conn = peer.connect(PREFIX + codice, {
@@ -363,11 +392,24 @@
 
             peer.on('error', function (err) {
                 var tipo = (err && err.type) || '';
-                var spiega = tipo === 'peer-unavailable'
-                    ? "Nessun computer in ascolto su quel codice. Controlla che sia acceso l'interruttore Telefono."
-                    : ((err && err.message) || String(err));
+                var spiega;
+                if (tipo === 'peer-unavailable') {
+                    spiega = "Nessun computer in ascolto su quel codice. Controlla che sul computer "
+                           + "sia acceso l'interruttore Telefono e che il codice sia quello giusto.";
+                } else if (tipo === 'negotiation-failed') {
+                    // nel codice di PeerJS questo errore vuol dire
+                    // iceConnectionState === 'failed': i due si sono trovati
+                    // ma non c'e' una strada per farli parlare
+                    spiega = 'I due dispositivi si sono trovati ma non riescono a parlarsi. '
+                           + "Mettili sulla stessa wi-fi; se ci sono entrambi, il router "
+                           + 'probabilmente impedisce ai dispositivi di parlarsi fra loro '
+                           + '(isolamento client), e serve un server TURN in data/ice.json.';
+                } else {
+                    spiega = (err && err.message) || String(err);
+                }
                 chiediCodice('Collegamento diretto non riuscito.', spiega);
             });
+          });
         }, function (perche) {
             chiediCodice('Collegamento diretto non disponibile.', perche);
         });

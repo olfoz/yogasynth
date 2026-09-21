@@ -85,6 +85,7 @@ schermo.html            pagina per il telefono: guarda e basta
 css/styles.css
 data/asanas.json        asana di profilo, rette per asana, sequenza, accordi
 data/intro-sukhasana.json  l'animazione iniziale inclusa
+data/ice.json           server di appoggio per il collegamento diretto
 avatars/nathan.fbx      l'avatar della cartella yoga
 intro/                  ci va il tuo intro.anim (vedi intro/LEGGIMI.md)
 
@@ -342,6 +343,32 @@ temporale e il telefono scarta quelli superati.
 I primissimi aggiornamenti dopo che un telefono si collega possono andare
 persi: il lato computer registra la connessione un attimo dopo il telefono.
 A venti aggiornamenti al secondo non si nota.
+
+### Quando il collegamento diretto fallisce
+
+Se il telefono dice **"Negotiation of connection to ... failed"**, non e' il
+servizio di incontro: nel codice di PeerJS quel messaggio esce quando
+`iceConnectionState === 'failed'`. Vuol dire che i due dispositivi **si sono
+trovati** ma non c'e' una strada per farli parlare. Succede quando:
+
+- stanno su reti diverse (uno in wi-fi, l'altro sotto rete mobile), e le NAT
+  dei due lati non si lasciano attraversare;
+- stanno sulla stessa wi-fi ma il router ha l'**isolamento client** acceso, e
+  impedisce ai dispositivi di parlarsi fra loro. Sulle reti ospiti e' di serie.
+
+La via di scorta si chiama **TURN**: un server che fa da ponte quando quella
+diretta non c'e'. Sta in [`data/ice.json`](data/ice.json), che leggono sia il
+computer sia il telefono — si cambia senza toccare il codice.
+
+> **Attenzione alla privacy.** Finche' il collegamento e' diretto, le
+> posizioni del corpo non toccano nessun server. Quando entra in gioco il
+> TURN, invece, ci passano attraverso. Quelli configurati sono pubblici e
+> gratuiti (openrelay), quindi senza garanzie: se la cosa ti pesa, mettine
+> uno tuo, oppure togli le voci `turn:` da `data/ice.json` e accetta che fra
+> reti diverse a volte non si colleghi.
+
+`/tools/banco-rete.html`, aperto **nel browser vero su tutti e due i
+dispositivi**, dice quale dei tre pezzi manca: WebRTC, STUN o TURN.
 
 **Quale scegliere.** Se sei a casa e puoi dare una volta il comando del
 firewall, il ponte e' piu' semplice e non dipende da nessuno. Il collegamento

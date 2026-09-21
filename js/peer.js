@@ -22,6 +22,30 @@
 // e non toccano nessun server.
 
 const PEERJS_URL = 'https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js';
+const ICE_URL = 'data/ice.json';
+
+// Se data/ice.json non si carica si va avanti con il minimo indispensabile.
+// Con il solo STUN il collegamento riesce quando una strada diretta esiste,
+// e fallisce con "Negotiation ... failed" quando non esiste.
+const ICE_MINIMO = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+
+let iceCache = null;
+
+/** Server di appoggio per WebRTC, dal file dati (vedi data/ice.json). */
+export async function caricaIce() {
+    if (iceCache) return iceCache;
+    try {
+        const res = await fetch(ICE_URL, { cache: 'no-cache' });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const dati = await res.json();
+        if (!dati.iceServers || !dati.iceServers.length) throw new Error('nessun server elencato');
+        iceCache = { iceServers: dati.iceServers };
+    } catch (e) {
+        console.info('[peer] data/ice.json non caricato (' + e.message + '): uso il minimo.');
+        iceCache = ICE_MINIMO;
+    }
+    return iceCache;
+}
 const PREFIX = 'yogasynth-';
 const CODE_KEY = 'yogasynth.codice';
 
@@ -104,17 +128,27 @@ export class PeerHost {
             this.attivo = false;
             return null;
         }
+        this.ice = await caricaIce();
         this._apri(Peer);
         return this.codice;
     }
 
     _apri(Peer) {
         if (!this.attivo) return;
-        this.peer = new Peer(PREFIX + this.codice, { debug: 0 });
+        this.peer = new Peer(PREFIX + this.codice, { debug: 0, config: this.ice });
 
         this.peer.on('open', () => {
             this._tentativi = 0;
             this.onStato('in attesa del telefono');
+        });
+
+        // Il collegamento al servizio di incontro puo' cadere senza che se ne
+        // accorga nessuno: la scheda continuerebbe a dire "in attesa del
+        // telefono" mentre il telefono non trova piu' nessuno.
+        this.peer.on('disconnected', () => {
+            if (!this.attivo) return;
+            this.onStato('servizio di incontro caduto, riprovo');
+            try { this.peer.reconnect(); } catch (e) { /* gia' distrutto */ }
         });
 
         this.peer.on('connection', conn => {

@@ -1,0 +1,30 @@
+{
+  "_doc": {
+    "cosa": "Server che aiutano computer e telefono a trovare una strada per parlarsi (WebRTC). Li leggono sia il computer (js/peer.js) sia il telefono (schermo.html).",
+    "stun": "Dice a ogni dispositivo qual e' il suo indirizzo visto da fuori. Non trasporta niente: solo presentazioni.",
+    "turn": "Serve quando i due non riescono a parlarsi direttamente — reti diverse, oppure un router che impedisce ai dispositivi di parlarsi fra loro (isolamento client). In quel caso i dati passano di li'. E' l'unico caso in cui le posizioni del corpo toccano un server di terzi: finche' il collegamento e' diretto, non succede.",
+    "errore": "Senza TURN, quando la strada diretta non c'e' il telefono dice 'Negotiation of connection ... failed', che nel codice di PeerJS vuol dire iceConnectionState === 'failed'.",
+    "sostituire": "Quelli qui sotto sono pubblici e gratuiti, quindi senza garanzie e a volte lenti. Per qualcosa di serio metti i tuoi: basta cambiare questo file, non serve toccare il codice.",
+    "disattivare": "Per non usare nessun relay e accettare che a volte non si colleghi, lascia solo le voci stun."
+  },
+
+  "iceServers": [
+    { "urls": "stun:stun.l.google.com:19302" },
+    { "urls": "stun:stun1.l.google.com:19302" },
+    {
+      "urls": "turn:openrelay.metered.ca:80",
+      "username": "openrelayproject",
+      "credential": "openrelayproject"
+    },
+    {
+      "urls": "turn:openrelay.metered.ca:443",
+      "username": "openrelayproject",
+      "credential": "openrelayproject"
+    },
+    {
+      "urls": "turn:openrelay.metered.ca:443?transport=tcp",
+      "username": "openrelayproject",
+      "credential": "openrelayproject"
+    }
+  ]
+}

@@ -36,32 +36,54 @@ function say(m) { L.push(m); o.innerHTML = L.join('\n'); }
 function ok(m) { say('<span class="ok">SI </span> ' + m); }
 function no(m) { say('<span class="no">NO </span> ' + m); }
 
-// ─── 1 e 2: WebRTC e STUN ───────────────────────────────────────────────
+// --- 1, 2 e 3: WebRTC, STUN e TURN -------------------------------------
 var tipi = {};
-try {
-    var pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
-    pc.createDataChannel('prova');
-    pc.onicecandidate = function (e) {
-        if (!e.candidate) { return; }
-        var t = (e.candidate.candidate.match(/ typ (\w+)/) || [])[1] || '?';
-        tipi[t] = (tipi[t] || 0) + 1;
-    };
-    pc.createOffer().then(function (off) { return pc.setLocalDescription(off); })
-        .catch(function (e) { no('WebRTC: ' + e.message); });
+fetch('../data/ice.json', { cache: 'no-cache' })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .catch(function () { return null; })
+    .then(function (d) {
+        var config = (d && d.iceServers && d.iceServers.length)
+            ? { iceServers: d.iceServers }
+            : { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+        var conTurn = config.iceServers.some(function (srv) {
+            return String(srv.urls).indexOf('turn:') === 0;
+        });
 
-    setTimeout(function () {
-        tipi.host ? ok('WebRTC funziona (candidati locali: ' + tipi.host + ')')
-                  : no('WebRTC non raccoglie nemmeno candidati locali: qui e\' disattivato');
-        tipi.srflx ? ok('STUN raggiungibile (indirizzo pubblico trovato)')
-                   : no('STUN non raggiungibile: UDP verso internet bloccato');
-        try { pc.close(); } catch (e) {}
-    }, 6000);
-} catch (err) {
-    no('WebRTC non disponibile: ' + err.message);
-}
+        try {
+            var pc = new RTCPeerConnection(config);
+            pc.createDataChannel('prova');
+            pc.onicecandidate = function (e) {
+                if (!e.candidate) { return; }
+                var m = e.candidate.candidate.match(/ typ ([a-z]+)/);
+                var t = m ? m[1] : '?';
+                tipi[t] = (tipi[t] || 0) + 1;
+            };
+            pc.createOffer().then(function (off) { return pc.setLocalDescription(off); })
+                .catch(function (e) { no('WebRTC: ' + e.message); });
+
+            setTimeout(function () {
+                tipi.host ? ok('WebRTC funziona (candidati locali: ' + tipi.host + ')')
+                          : no('WebRTC non raccoglie nemmeno candidati locali: qui e disattivato');
+                tipi.srflx ? ok('STUN raggiungibile (indirizzo pubblico trovato)')
+                           : no('STUN non raggiungibile: UDP verso internet bloccato');
+                if (!conTurn) {
+                    say('<span class="wait">-  </span> nessun TURN in data/ice.json: senza, '
+                        + 'quando non esiste una strada diretta il collegamento fallisce');
+                } else if (tipi.relay) {
+                    ok('TURN raggiungibile: via di scorta anche fra reti diverse');
+                } else {
+                    no('TURN elencato ma irraggiungibile: se i due dispositivi non si '
+                       + 'vedono direttamente, il collegamento fallira');
+                }
+                try { pc.close(); } catch (e) {}
+            }, 9000);
+        } catch (err) {
+            no('WebRTC non disponibile: ' + err.message);
+        }
+    });
 
 // ─── 3: WebSocket verso il broker ───────────────────────────────────────
-say('<span class="wait">...</span> provo il WebSocket verso il broker (8s)');
+say('<span class="wait">...</span> raccolgo i candidati (9s) e provo il broker (8s)');
 var t0 = Date.now(), risolto = false;
 function esito(f, m) { if (risolto) { return; } risolto = true; f(m + ' (' + (Date.now() - t0) + 'ms)'); }
 try {
