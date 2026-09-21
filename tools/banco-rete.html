@@ -65,11 +65,17 @@ fetch('../data/ice.json', { cache: 'no-cache' })
         try {
             var pc = new RTCPeerConnection(config);
             pc.createDataChannel('prova');
+            var mdns = 0;
             pc.onicecandidate = function (e) {
                 if (!e.candidate) { return; }
-                var m = e.candidate.candidate.match(/ typ ([a-z]+)/);
+                var c = e.candidate.candidate;
+                var m = c.match(/ typ ([a-z]+)/);
                 var t = m ? m[1] : '?';
                 tipi[t] = (tipi[t] || 0) + 1;
+                // i browser nascondono l'IP locale dietro un nome .local
+                // risolto via mDNS: se il multicast non passa, i due
+                // dispositivi non riescono a usarlo per trovarsi
+                if (t === 'host' && /\.local/.test(c)) { mdns++; }
             };
             pc.createOffer().then(function (off) { return pc.setLocalDescription(off); })
                 .catch(function (e) { no('WebRTC: ' + e.message); });
@@ -77,16 +83,21 @@ fetch('../data/ice.json', { cache: 'no-cache' })
             setTimeout(function () {
                 tipi.host ? ok('WebRTC funziona (candidati locali: ' + tipi.host + ')')
                           : no('WebRTC non raccoglie nemmeno candidati locali: qui e disattivato');
+                if (mdns) {
+                    say('<span class="wait">-  </span> gli indirizzi locali sono nascosti dietro nomi '
+                        + '.local (mDNS): se il router non lascia passare il multicast, i due '
+                        + 'dispositivi non si trovano nemmeno sulla stessa wi-fi');
+                }
                 tipi.srflx ? ok('STUN raggiungibile (indirizzo pubblico trovato)')
                            : no('STUN non raggiungibile: UDP verso internet bloccato');
                 if (!conTurn) {
-                    say('<span class="wait">-  </span> nessun TURN in data/ice.json: senza, '
-                        + 'quando non esiste una strada diretta il collegamento fallisce');
+                    say('<span class="wait">-  </span> nessun TURN configurato. Va bene finche' '
+                        + 'una strada diretta esiste; quando non esiste, il collegamento fallisce. '
+                        + 'Per averne uno serve un account gratuito: vedi data/ice.json');
                 } else if (tipi.relay) {
                     ok('TURN raggiungibile: via di scorta anche fra reti diverse');
                 } else {
-                    no('TURN elencato ma irraggiungibile: se i due dispositivi non si '
-                       + 'vedono direttamente, il collegamento fallira');
+                    no('TURN elencato ma irraggiungibile: controlla indirizzo e credenziali in data/ice.json');
                 }
                 try { pc.close(); } catch (e) {}
             }, 9000);

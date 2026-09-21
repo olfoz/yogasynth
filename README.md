@@ -357,18 +357,36 @@ trovati** ma non c'e' una strada per farli parlare. Succede quando:
   impedisce ai dispositivi di parlarsi fra loro. Sulle reti ospiti e' di serie.
 
 La via di scorta si chiama **TURN**: un server che fa da ponte quando quella
-diretta non c'e'. Sta in [`data/ice.json`](data/ice.json), che leggono sia il
-computer sia il telefono — si cambia senza toccare il codice.
+diretta non c'e'. Si configura in [`data/ice.json`](data/ice.json), che
+leggono sia il computer sia il telefono.
+
+**Ma non ce n'e' uno gia' pronto, ed e' voluto.** I server pubblici con
+credenziali libere sono finiti: `openrelay.metered.ca` e' spento (muto su UDP
+80, 443 e 3478, TCP 443 chiude subito), e `freeturn`, `anyfirewall`,
+`viagenie` non risolvono piu' nemmeno il nome. Gli unici due ancora vivi —
+`relay.metered.ca` e `turn.cloudflare.com` — vogliono un account gratuito che
+ti da' username e password da incollare in `data/ice.json`. Chi ha un server
+suo puo' installarci coturn.
+
+Lasciare un TURN morto nel file non aiuta: allunga la raccolta dei candidati
+e fa dire al banco "TURN elencato ma irraggiungibile".
 
 > **Attenzione alla privacy.** Finche' il collegamento e' diretto, le
-> posizioni del corpo non toccano nessun server. Quando entra in gioco il
-> TURN, invece, ci passano attraverso. Quelli configurati sono pubblici e
-> gratuiti (openrelay), quindi senza garanzie: se la cosa ti pesa, mettine
-> uno tuo, oppure togli le voci `turn:` da `data/ice.json` e accetta che fra
-> reti diverse a volte non si colleghi.
+> posizioni del corpo non toccano nessun server. Con il TURN ci passano
+> attraverso: e' un motivo in piu' per preferire il ponte quando si e' in casa.
 
-`/tools/banco-rete.html`, aperto **nel browser vero su tutti e due i
-dispositivi**, dice quale dei tre pezzi manca: WebRTC, STUN o TURN.
+### E se sono sulla stessa wi-fi?
+
+Puo' fallire lo stesso. I browser nascondono l'indirizzo locale dietro un
+nome `.local` risolto via **mDNS**: se il router non lascia passare il
+multicast — cosa comune sulle reti classificate "Public" e sulle reti ospiti
+— i due dispositivi non riescono a trovarsi nemmeno stando a mezzo metro.
+`/tools/banco-rete.html` lo segnala quando succede.
+
+**In casa la risposta giusta e' il ponte**, non il collegamento diretto: una
+volta data la regola del firewall e' piu' veloce, non dipende da nessun
+servizio esterno e non manda niente fuori dalla tua rete. Il collegamento
+diretto serve per quando sei fuori casa, o dal sito pubblicato.
 
 **Quale scegliere.** Se sei a casa e puoi dare una volta il comando del
 firewall, il ponte e' piu' semplice e non dipende da nessuno. Il collegamento
