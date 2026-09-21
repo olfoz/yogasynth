@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<title>banco di prova — scheda del telefono</title>
+<link rel="stylesheet" href="../css/styles.css">
+<style>
+    body { background: #05060b; padding: 24px; }
+    .riga { display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap; }
+    .cast-card { position: static; margin: 0; }
+    h2 { font-size: 13px; color: #8b93ad; font-weight: 400; margin: 0 0 8px; }
+    #esito { margin-top: 20px; font: 12px ui-monospace, Menlo, monospace; color: #9fe7ff; }
+</style>
+</head>
+<body>
+<div class="riga">
+    <div>
+        <h2>sito pubblicato (nessun ponte)</h2>
+        <div class="cast-card" id="a">
+            <div class="cast-title">&#128241; Apri sul telefono</div>
+            <div class="cast-qr"></div>
+            <code></code>
+            <div class="cast-note"></div>
+            <div class="cast-note peer">in attesa del telefono</div>
+        </div>
+    </div>
+    <div>
+        <h2>in locale (ponte attivo)</h2>
+        <div class="cast-card" id="b">
+            <div class="cast-title">&#128241; Apri sul telefono</div>
+            <div class="cast-qr"></div>
+            <code></code>
+            <div class="cast-note"></div>
+            <div class="cast-note peer">telefono collegato</div>
+        </div>
+    </div>
+</div>
+<div id="esito">…</div>
+
+<script type="module">
+/*
+ * Disegna la scheda "Apri sul telefono" nei due casi, senza webcam e senza
+ * avviare la pratica: serve a guardare che il QR ci sia e che l'indirizzo
+ * sia quello giusto.
+ */
+import { mostraQr } from '../js/qr.js?v=1';
+
+const CASI = [
+    ['a', 'https://olfoz.github.io/yogasynth/', 'orso-7133'],
+    ['b', 'http://192.168.100.3:8941/', 'riva-1432']
+];
+const note = [];
+
+for (const [id, base, codice] of CASI) {
+    const card = document.getElementById(id);
+    const link = base + 'schermo.html#' + codice;
+    card.querySelector('code').textContent = link;
+    card.querySelector('.cast-note').innerHTML =
+        'Inquadra il codice, oppure scrivi l\u2019indirizzo. '
+        + 'Se serve a mano, il codice \u00e8 <span class="codice">' + codice + '</span>.';
+    const fatto = await mostraQr(card.querySelector('.cast-qr'), link);
+    const svg = card.querySelector('.cast-qr svg');
+    const moduli = svg ? svg.querySelectorAll('rect, path').length : 0;
+    note.push(id + ': qr=' + (fatto ? 'si' : 'NO') + '  elementi=' + moduli
+        + '  lunghezza indirizzo=' + link.length);
+}
+/*
+ * Giro completo: il QR appena disegnato viene riletto da un decodificatore
+ * indipendente (jsQR) e si controlla che ne esca ESATTAMENTE l'indirizzo di
+ * partenza. "Sembra un QR" non vuol dire che contenga la cosa giusta.
+ *
+ * jsQR serve solo qui, nel banco: l'app non lo carica.
+ */
+async function decodifica(svgEl, atteso) {
+    if (!window.jsQR) {
+        await new Promise((ris, rif) => {
+            const t = document.createElement('script');
+            t.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js';
+            t.onload = ris; t.onerror = () => rif(new Error('jsQR non scaricabile'));
+            document.head.appendChild(t);
+        });
+    }
+    // l'SVG va portato su una canvas per averne i pixel
+    const dati = new XMLSerializer().serializeToString(svgEl);
+    const img = new Image();
+    const pronto = new Promise((ris, rif) => { img.onload = ris; img.onerror = rif; });
+    img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(dati)));
+    await pronto;
+
+    const lato = 440;
+    const cv = document.createElement('canvas');
+    cv.width = cv.height = lato;
+    const ctx = cv.getContext('2d');
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, lato, lato);
+    ctx.drawImage(img, 0, 0, lato, lato);
+    const px = ctx.getImageData(0, 0, lato, lato);
+    const letto = window.jsQR(px.data, lato, lato);
+    return letto && letto.data === atteso
+        ? 'riletto identico'
+        : 'DIVERSO: ' + (letto ? letto.data : 'non leggibile');
+}
+
+for (const [id, base, codice] of CASI) {
+    const card = document.getElementById(id);
+    const link = base + 'schermo.html#' + codice;
+    const svg = card.querySelector('.cast-qr svg');
+    try {
+        note.push(id + ': ' + (svg ? await decodifica(svg, link) : 'nessun svg da leggere'));
+    } catch (e) {
+        note.push(id + ': decodifica non riuscita (' + (e.message || e) + ')');
+    }
+    document.getElementById('esito').textContent = note.join(String.fromCharCode(10));
+}
+
+document.getElementById('esito').textContent = note.join('\n');
+</script>
+</body>
+</html>

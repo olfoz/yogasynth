@@ -97,6 +97,7 @@ js/
   schermo.js            confeziona e manda le posizioni al secondo schermo
   schermoView.js        disegno della scena sul telefono (non e' un modulo)
   peer.js               collegamento diretto WebRTC, lato computer
+  qr.js                 codice QR dell'indirizzo, disegnato nel browser
   music/
     theory.js           circolo delle quinte, accordi, registri
     synth.js            drone per retta: armonici nel tempo, purezza dal punteggio
@@ -123,6 +124,7 @@ tools/
   banco-sintassi.html   controlla che tutto il codice compili, pagine incluse
   banco-rete.html       WebRTC, STUN e WebSocket funzionano da qui?
   banco-peer.html       giro completo del collegamento diretto
+  banco-qr.html         la scheda "Apri sul telefono", QR riletto e confrontato
   banco-app.html        avvia l'app intera in un iframe e racconta cosa fa
 ```
 
@@ -261,10 +263,21 @@ La webcam deve stare lontana per prendere tutto il corpo; lo schermo vicino
 per poterlo leggere. Sono due posti diversi, quindi servono due dispositivi:
 il computer inquadra, il telefono lo appoggi davanti a te e guarda.
 
-1. sul computer, `python tools/serve.py`, apri `http://localhost:8941/`,
-   premi INIZIA e accendi l'interruttore **Telefono** (compare l'indirizzo);
-2. sul telefono, stessa rete wi-fi, apri quell'indirizzo:
-   `http://<ip-del-computer>:8941/schermo.html`.
+1. sul computer apri l'app, premi INIZIA e accendi l'interruttore
+   **Telefono**: compare un QR e un indirizzo;
+2. sul telefono inquadra il QR, oppure scrivi l'indirizzo.
+
+Al telefono serve **una cosa sola**: un indirizzo che contenga gia' il
+codice, tipo `.../schermo.html#orso-7133`. Da li' si collega da solo per la
+strada che trova aperta — il ponte sulla rete locale se c'e', altrimenti il
+collegamento diretto. Per questo la scheda mostra un indirizzo e non due
+strade fra cui scegliere.
+
+Il QR si disegna nel browser (`js/qr.js`): nessuna immagine chiesta a un
+servizio esterno, quindi l'indirizzo di casa non esce da qui. Il giro
+encode-decode e' verificato in `/tools/banco-qr.html`, che rilegge il QR
+appena disegnato con un decodificatore indipendente e controlla che ne esca
+esattamente l'indirizzo di partenza.
 
 ### Si mandano posizioni, non immagini
 
@@ -511,6 +524,7 @@ Con il server locale acceso (`python tools/serve.py`):
 | `/tools/banco-sintassi.html` | compila ogni modulo, script e script-dentro-la-pagina. In italiano gli apostrofi sono ovunque e dentro apici singoli spezzano la stringa: in un modulo l'errore si vede subito, in uno script dentro una pagina no — la pagina si carica, non esegue niente e resta muta |
 | `/tools/banco-rete.html` | da aprire nel **browser vero**: dice se WebRTC, STUN e il WebSocket verso il broker funzionano su questa rete |
 | `/tools/banco-peer.html` | il giro completo del collegamento diretto: codice, presentazioni, canale, dati |
+| `/tools/banco-qr.html` | la scheda "Apri sul telefono" nei due casi (sito pubblicato e ponte locale), col QR riletto da un decodificatore indipendente |
 | `/tools/banco-app.html` | apre l'app in un iframe, preme INIZIA e riporta stato ed errori |
 
 `banco-app.html` ha bisogno della webcam: da browser normale funziona, in

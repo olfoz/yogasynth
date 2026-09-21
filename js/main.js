@@ -20,6 +20,7 @@ import { FpsMeter } from './fps.js';
 import { Intro } from './intro.js';
 import { Schermo } from './schermo.js';
 import { PeerHost } from './peer.js';
+import { mostraQr } from './qr.js';
 
 const HOLD_SECONDS = 6;            // tenuta dell'asana completo per superarlo
 const POSITION_TIMEOUT_MS = 30000; // oltre questo tempo si passa comunque avanti
@@ -560,6 +561,15 @@ function setupManualZoom(target) {
  * L'indirizzo lo sa solo il server (il browser, su localhost, non conosce
  * l'IP di rete di questo computer), quindi glielo si chiede.
  */
+/**
+ * Accende o spegne l'invio al telefono.
+ *
+ * Al telefono serve UNA cosa sola: un indirizzo che contenga gia' il codice
+ * (`.../schermo.html#orso-7133`). Da li' si collega da solo, per la strada
+ * che trova aperta — il ponte sulla rete locale se c'e', altrimenti il
+ * collegamento diretto. Percio' la scheda mostra un indirizzo e un QR, non
+ * due strade fra cui scegliere.
+ */
 async function toggleSchermo(on) {
     if (!schermo) return;
     const card = el('castCard');
@@ -573,25 +583,35 @@ async function toggleSchermo(on) {
 
     schermo.start();
     card.classList.remove('hidden');
+    el('castUrl').textContent = 'preparo il collegamento…';
+    el('castNote').textContent = '';
 
-    // 1. il ponte sulla rete locale: veloce, senza internet, ma il firewall
-    //    del computer deve lasciar entrare il telefono
-    const url = await Schermo.phoneUrl();
-    if (url) {
-        el('castUrl').textContent = url;
-        el('castNote').textContent = "Stessa rete wi-fi. Il telefono ridisegna la scena da se', riceve posizioni e non immagini.";
-    } else {
-        el('castUrl').textContent = 'ponte non attivo';
-        el('castNote').textContent =
-            'Questo server non fa da ponte. Fermalo e riavvia con:  python tools/serve.py';
+    // Il ponte c'e' solo se il sito gira da tools/serve.py. Su un sito
+    // pubblicato non c'e' e non c'e' niente di sbagliato: il collegamento
+    // diretto non ne ha bisogno.
+    const urlPonte = await Schermo.phoneUrl();
+    const codice = peer ? await peer.start() : null;
+
+    // base dell'indirizzo: quella del ponte se raggiungibile (resta in rete
+    // locale, piu' veloce), altrimenti quella del sito da cui siamo aperti
+    const base = urlPonte
+        ? urlPonte.replace(/schermo\.html.*$/, '')
+        : location.href.replace(/[^/]*$/, '');
+    const link = base + 'schermo.html' + (codice ? '#' + codice : '');
+
+    el('castUrl').textContent = link;
+    el('castNote').innerHTML = codice
+        ? 'Inquadra il codice, oppure scrivi l’indirizzo. '
+          + 'Se serve a mano, il codice è <span class="codice">' + codice + '</span>.'
+        : 'Inquadra il codice, oppure scrivi l’indirizzo.';
+
+    if (!codice) {
+        el('castPeer').textContent = urlPonte
+            ? 'Collegamento diretto non disponibile: resta il ponte sulla rete locale.'
+            : 'Collegamento diretto non disponibile e nessun ponte: il telefono non potra’ collegarsi.';
     }
 
-    // 2. il collegamento diretto: nessuna regola di firewall da aggiungere,
-    //    ma per presentarsi ai due dispositivi serve internet
-    if (peer) {
-        const codice = await peer.start();
-        el('castCode').textContent = codice || 'non disponibile';
-    }
+    mostraQr(el('castQr'), link);
 }
 
 function setAutoZoom(on) {

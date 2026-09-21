@@ -198,21 +198,19 @@ body {
     user-select: all;
 }
 .cast-note { font-size: 11px; color: #8b93ad; margin-top: 6px; line-height: 1.4; }
-.cast-sep {
-    margin: 12px 0 8px;
-    padding-top: 10px;
-    border-top: 1px solid rgba(255, 255, 255, 0.12);
-    font-size: 10.5px;
-    color: #6f7691;
-    text-transform: lowercase;
+.cast-qr {
+    width: 168px;
+    margin: 10px auto 10px;
+    background: #fff;       /* il lettore vuole moduli scuri su chiaro */
+    border-radius: 8px;
+    padding: 6px;
 }
-.cast-code {
+.cast-qr:empty { display: none; }
+.cast-card .codice {
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: 21px;
     font-weight: 700;
-    letter-spacing: 0.06em;
     color: #9fe7ff;
-    user-select: all;
+    letter-spacing: 0.04em;
 }
 
 /* ─── Caricamento ──────────────────────────────────────────────────────── */
