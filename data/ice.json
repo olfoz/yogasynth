@@ -8,8 +8,8 @@
     "esempio_metered": {
       "_nota": "Sostituisci i tre valori con i tuoi e sposta questo blocco dentro iceServers.",
       "urls": "turn:yogasynth.metered.live:80",
-      "username": "INCOLLA_USERNAME",
-      "credential": "INCOLLA_CREDENTIAL"
+      "username": "df9283578ad30707e9134eb7",
+      "credential": "5aoePExdUwyLT06d"
     },
     "prima_di_tutto": "Se computer e telefono sono in casa sulla stessa rete, il TURN non serve: conviene il ponte HTTP (tools/serve.py), che e' piu' veloce, non dipende da nessuno e non manda niente fuori. Vedi il README.",
     "quanto_consuma": "Circa 1,2 kB per aggiornamento, dodici volte al secondo: ~50 MB l'ora, ma SOLO quando il TURN entra davvero in gioco. Se i due dispositivi si parlano direttamente, il contatore non si muove."

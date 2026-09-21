@@ -575,6 +575,33 @@ il **collegamento diretto**, e perche' funzioni ovunque serve un **TURN**.
    mobile** invece che in wi-fi: e' la condizione piu' simile a quella che
    troverai.
 
+### Quale piano TURN
+
+metered ne ha due gratuiti, e la differenza non e' solo la quota:
+
+| | Free Trial Global 500MB | Free 20GB |
+|---|---|---|
+| quota mensile | 500 MB (~10 ore) | 20 GB (~400 ore) |
+| rete di server | globale, instradamento al piu' vicino | non dichiarata |
+| accesso API | completo | no |
+
+Per una dimostrazione singola 500 MB bastano e avanzano, e la rete globale
+tiene bassa la latenza ovunque. Per usarlo con continuita' servono i 20 GB,
+accettando che il server possa essere piu' lontano.
+
+Non serve indovinare quanto costi in ritardo: si misura.
+`/tools/banco-peer.html?relay=1` **obbliga** il passaggio dal TURN
+(`iceTransportPolicy: 'relay'`, nessuna scorciatoia diretta) e stampa il
+tempo di andata e ritorno. Provalo con un piano, cambia piano, riprova.
+
+Come leggere il numero: lo yoga e' fatto di movimenti lenti, e il telefono
+guarda soltanto. Fino a un centinaio di millisecondi di sola andata non si
+nota; oltre i duecento si comincia a vedere il corpo che insegue.
+
+Quella modalita' e' anche la prova piu' onesta che il TURN funzioni davvero:
+`banco-rete.html` dice che il server risponde, `?relay=1` dice che ci passa
+un collegamento vero.
+
 ### Sul posto
 
 Computer: apri il sito, INIZIA, accendi **Telefono**. Telefono: inquadra il
@@ -644,7 +671,7 @@ Con il server locale acceso (`python tools/serve.py`):
 | `/tools/banco-schermo.html` | la vista del telefono su una posa finta, senza rete (schermo.html tiene sempre una richiesta appesa, e una pagina che aspetta la rete headless non la fotografa) |
 | `/tools/banco-sintassi.html` | compila ogni modulo, script e script-dentro-la-pagina. In italiano gli apostrofi sono ovunque e dentro apici singoli spezzano la stringa: in un modulo l'errore si vede subito, in uno script dentro una pagina no — la pagina si carica, non esegue niente e resta muta |
 | `/tools/banco-rete.html` | da aprire nel **browser vero**: dice se WebRTC, STUN e il WebSocket verso il broker funzionano su questa rete |
-| `/tools/banco-peer.html` | il giro completo del collegamento diretto: codice, presentazioni, canale, dati |
+| `/tools/banco-peer.html` | il giro completo del collegamento diretto: codice, presentazioni, canale, dati. Con `?relay=1` obbliga il passaggio dal TURN e misura il tempo di andata e ritorno |
 | `/tools/banco-qr.html` | la scheda "Apri sul telefono" nei due casi (sito pubblicato e ponte locale), col QR riletto da un decodificatore indipendente |
 | `/tools/banco-app.html` | apre l'app in un iframe, preme INIZIA e riporta stato ed errori |
 

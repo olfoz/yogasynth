@@ -35,8 +35,16 @@ if (!/[?&]v=/.test(location.search)) {
  * presentazioni dal broker pubblico, dati su un canale WebRTC diretto.
  * Serve internet.
  *
- *   chrome --headless=new --virtual-time-budget=40000 --dump-dom
- *          http://127.0.0.1:8941/tools/banco-peer.html
+ * Due modalita':
+ *   banco-peer.html           strada qualunque: se i due si vedono
+ *                             direttamente, il TURN non viene nemmeno usato
+ *   banco-peer.html?relay=1   FORZA il passaggio dal TURN
+ *                             (iceTransportPolicy: 'relay')
+ *
+ * La seconda e' quella che conta per una dimostrazione fuori casa: se
+ * funziona li', funziona ovunque, perche' quella e' la via di scorta. E
+ * misurando il tempo di andata e ritorno si capisce quanto costa in
+ * latenza — utile per scegliere fra un piano TURN e un altro.
  */
 const L = [];
 const out = () => { document.getElementById('o').innerHTML = L.join('\n'); };
@@ -48,7 +56,21 @@ const t0 = performance.now();
 const ms = () => (performance.now() - t0).toFixed(0) + 'ms';
 
 try {
-    const { PeerHost, caricaPeerJS, nuovoCodice } = await import('/js/peer.js?v=' + Date.now());
+    const { PeerHost, caricaPeerJS, nuovoCodice, caricaIce } = await import('/js/peer.js?v=' + Date.now());
+
+    const soloRelay = /[?&]relay=1/.test(location.search);
+    const ice = await caricaIce();
+    const conTurn = ice.iceServers.some(s => String(s.urls).indexOf('turn:') === 0);
+    dire(soloRelay
+        ? 'modalita' RELAY: obbligo il passaggio dal TURN'
+        : 'modalita' normale: si prende la strada che c'e' (aggiungi ?relay=1 per forzare il TURN)');
+    if (soloRelay && !conTurn) {
+        no('nessun TURN in data/ice.json: in modalita' relay non puo' funzionare');
+        throw new Error('TURN mancante');
+    }
+    const config = soloRelay
+        ? { iceServers: ice.iceServers, iceTransportPolicy: 'relay' }
+        : ice;
 
     dire('scarico PeerJS dal CDN...');
     await caricaPeerJS();
@@ -61,6 +83,9 @@ try {
         dire('  [computer] ' + testo + (dettaglio ? ' — ' + dettaglio : ''));
     });
     const dato = await host.start(codice);
+    // stessa politica anche dal lato computer, altrimenti uno dei due
+    // potrebbe ancora prendere una scorciatoia diretta
+    if (soloRelay && host.peer) { host.peer.options.config = config; }
     if (dato !== codice) { dire('  (il codice era occupato, ora e: ' + dato + ')'); }
 
     // aspetta che il broker abbia registrato il lato computer
@@ -74,7 +99,7 @@ try {
     // lato telefono
     dire('il telefono si collega con il codice...');
     const ricevuti = [];
-    const telefono = new window.Peer(null, { debug: 0 });
+    const telefono = new window.Peer(null, { debug: 0, config: config });
     const telefonoPronto = await new Promise(r => {
         telefono.on('open', () => r(true));
         telefono.on('error', () => r(false));
@@ -138,6 +163,31 @@ try {
                + ' / retta ' + ultimo.rays[0].id);
         } else {
             no('contenuto alterato: ' + JSON.stringify(ultimo).slice(0, 120));
+        }
+    }
+
+    // --- quanto ci mette un messaggio ad andare e tornare -------------
+    if (aperto) {
+        conn.on('data', d => { if (d && d.ping) { conn.send({ pong: d.ping }); } });
+        const canale = host.connessioni[0];
+        if (canale) {
+            const tempi = [];
+            canale.on('data', d => {
+                if (d && d.pong) { tempi.push(performance.now() - d.pong); }
+            });
+            for (let i = 0; i < 10; i++) {
+                canale.send({ ping: performance.now() });
+                await new Promise(r => setTimeout(r, 150));
+            }
+            await new Promise(r => setTimeout(r, 600));
+            if (tempi.length) {
+                tempi.sort((a, b) => a - b);
+                const mediana = tempi[Math.floor(tempi.length / 2)];
+                ok('andata e ritorno: ' + mediana.toFixed(0) + ' ms (mediana su '
+                   + tempi.length + '), sola andata circa ' + (mediana / 2).toFixed(0) + ' ms');
+            } else {
+                no('nessuna risposta al ping: non riesco a misurare il ritardo');
+            }
         }
     }
 
