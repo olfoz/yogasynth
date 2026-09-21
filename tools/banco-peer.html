@@ -9,6 +9,19 @@
     .ok { color: #7fe08a; }
     .no { color: #ff9a9a; }
 </style>
+<script>
+/*
+ * Si ricarica una volta sola con un parametro unico nell'indirizzo.
+ *
+ * GitHub Pages manda Cache-Control: max-age=600, quindi dopo un
+ * aggiornamento il browser continua a mostrare la pagina vecchia per dieci
+ * minuti e si finisce per leggere il risultato di una versione che non
+ * esiste piu'. Un indirizzo mai visto non e' in cache: arriva fresco.
+ */
+if (!/[?&]v=/.test(location.search)) {
+    location.replace(location.pathname + '?v=' + Date.now() + location.hash);
+}
+</script>
 </head>
 <body>
 <pre id="o">avvio…</pre>

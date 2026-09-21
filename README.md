@@ -483,6 +483,11 @@ in una sottocartella: funziona, i percorsi sono tutti relativi (provato).
 > ```bash
 > curl -s https://TUONOME.github.io/yogasynth/js/main.js | grep -c mostraQr
 > ```
+>
+> I banchi `banco-rete.html` e `banco-peer.html` si difendono da soli: al
+> primo caricamento rimbalzano su un indirizzo con un parametro mai visto,
+> che per forza non e' in cache. Per le altre pagine basta aggiungere a mano
+> un `?1` all'indirizzo.
 
 **Netlify o Cloudflare Pages.** Collega lo stesso repository, oppure trascina
 la cartella nella loro pagina. Nessun comando di build, nessuna cartella di
