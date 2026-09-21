@@ -8,6 +8,15 @@
     pre { white-space: pre-wrap; }
     .ok { color: #7fe08a; }
     .no { color: #ff9a9a; }
+    #scelta { margin-bottom: 14px; }
+    #scelta button {
+        font: inherit; font-weight: 700;
+        padding: 10px 16px; margin-right: 10px;
+        border: none; border-radius: 8px; cursor: pointer;
+        background: #2a2f4a; color: #e9ecf5;
+    }
+    #scelta button:hover { background: #3a4167; }
+    #scelta button.acceso { background: #7C4DFF; }
 </style>
 <script>
 /*
@@ -28,7 +37,11 @@ if (!/[?&]v=/.test(location.search)) {
 </script>
 </head>
 <body>
-<pre id="o">avvio…</pre>
+<div id="scelta">
+  <button id="bNormale">prova: strada qualunque</button>
+  <button id="bRelay">prova: FORZA il TURN</button>
+</div>
+<pre id="o">premi un pulsante</pre>
 <script type="module">
 /*
  * Prova il collegamento diretto per davvero: apre nella stessa pagina un
@@ -56,18 +69,30 @@ const dire = m => { L.push(m); out(); };
 const ok = m => { L.push('<span class="ok">OK  </span> ' + m); out(); };
 const no = m => { L.push('<span class="no">FAIL</span> ' + m); out(); };
 
-const t0 = performance.now();
+let t0 = performance.now();
 const ms = () => (performance.now() - t0).toFixed(0) + 'ms';
 
+/*
+ * La modalita' si sceglie con un pulsante, non con un parametro
+ * nell'indirizzo. Con il parametro bastava un rimbalzo di troppo (quello che
+ * difende dalla cache) per perderlo per strada, e la prova girava in
+ * modalita' normale mentre sembrava di star misurando il TURN: un numero
+ * sbagliato e nessun avviso. Un pulsante non si perde.
+ */
+async function esegui(soloRelay) {
+  document.getElementById('bNormale').classList.toggle('acceso', !soloRelay);
+  document.getElementById('bRelay').classList.toggle('acceso', soloRelay);
+  L.length = 0;
+  t0 = performance.now();
+  out();
 try {
     const { PeerHost, caricaPeerJS, nuovoCodice, caricaIce } = await import('../js/peer.js?v=' + Date.now());
 
-    const soloRelay = /[?&]relay=1/.test(location.search);
     const ice = await caricaIce();
     const conTurn = ice.iceServers.some(s => String(s.urls).indexOf('turn:') === 0);
     dire(soloRelay
-        ? "modalita RELAY: obbligo il passaggio dal TURN"
-        : "modalita normale: si prende la strada che c'e' (aggiungi ?relay=1 per forzare il TURN)");
+        ? "modalita RELAY: tutto obbligato a passare dal TURN"
+        : "modalita normale: si prende la strada che c'e' (in casa e' quasi sempre diretta)");
     if (soloRelay && !conTurn) {
         no("nessun TURN in data/ice.json: in modalita relay non puo' funzionare");
         throw new Error('TURN mancante');
@@ -201,6 +226,13 @@ try {
 } catch (e) {
     no((e && e.stack) || String(e));
 }
+}
+
+document.getElementById('bNormale').addEventListener('click', () => esegui(false));
+document.getElementById('bRelay').addEventListener('click', () => esegui(true));
+
+// si puo' ancora arrivare con ?relay=1 gia' nell'indirizzo
+if (/[?&]relay=1/.test(location.search)) { esegui(true); }
 </script>
 </body>
 </html>

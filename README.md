@@ -600,10 +600,16 @@ Per una dimostrazione singola 500 MB bastano e avanzano, e la rete globale
 tiene bassa la latenza ovunque. Per usarlo con continuita' servono i 20 GB,
 accettando che il server possa essere piu' lontano.
 
-Non serve indovinare quanto costi in ritardo: si misura.
-`/tools/banco-peer.html?relay=1` **obbliga** il passaggio dal TURN
-(`iceTransportPolicy: 'relay'`, nessuna scorciatoia diretta) e stampa il
-tempo di andata e ritorno. Provalo con un piano, cambia piano, riprova.
+Non serve indovinare quanto costi in ritardo: si misura. In
+`tools/banco-peer.html` ci sono due pulsanti, e quello **FORZA il TURN**
+impone `iceTransportPolicy: 'relay'` — nessuna scorciatoia diretta — e
+stampa il tempo di andata e ritorno. Provalo con un piano, cambia piano,
+riprova.
+
+La modalita' si sceglie con un pulsante e non con un parametro
+nell'indirizzo per un motivo imparato sul campo: un parametro basta un
+rimbalzo di troppo per perderlo, e la prova gira in modalita' normale
+mentre sembra di star misurando il TURN. Numero sbagliato, nessun avviso.
 
 Come leggere il numero: lo yoga e' fatto di movimenti lenti, e il telefono
 guarda soltanto. Fino a un centinaio di millisecondi di sola andata non si
