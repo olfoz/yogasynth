@@ -446,6 +446,17 @@ Poi nelle impostazioni del repository, *Pages* -> *Deploy from a branch* ->
 `main` / `root`. Il sito esce su `https://tuonome.github.io/yogasynth/`, cioe'
 in una sottocartella: funziona, i percorsi sono tutti relativi (provato).
 
+> **Dopo un push, il browser puo' mostrarti ancora la versione vecchia.**
+> GitHub Pages manda `Cache-Control: max-age=600`, quindi `index.html` e i
+> moduli restano in cache fino a dieci minuti. Il sito e' gia' aggiornato: sei
+> tu che vedi la copia vecchia. Ricarica forzando (Ctrl+Shift+R, su Mac
+> Cmd+Shift+R); su iPhone usa una scheda privata. Chi apre il sito per la
+> prima volta non se ne accorge. Per controllare cosa sta servendo davvero:
+>
+> ```bash
+> curl -s https://TUONOME.github.io/yogasynth/js/main.js | grep -c mostraQr
+> ```
+
 **Netlify o Cloudflare Pages.** Collega lo stesso repository, oppure trascina
 la cartella nella loro pagina. Nessun comando di build, nessuna cartella di
 output: il sito e' la cartella.
