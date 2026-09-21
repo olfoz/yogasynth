@@ -117,6 +117,7 @@ js/
 
 tools/
   serve.py              server locale + ponte verso il telefono
+  prova-turn.py         chiede al TURN di assegnare un relay: credenziali buone?
   apri-firewall.ps1     apre la porta 8941 verso la rete locale, una volta sola
   build_asanas.py       genera data/asanas.json dagli angoli delle pose
   banco-logica.html     accordi, ordine delle note, punteggi delle rette
@@ -372,9 +373,14 @@ suo puo' installarci coturn.
 Lasciare un TURN morto nel file non aiuta: allunga la raccolta dei candidati
 e fa dire al banco "TURN elencato ma irraggiungibile".
 
-> **Attenzione alla privacy.** Finche' il collegamento e' diretto, le
-> posizioni del corpo non toccano nessun server. Con il TURN ci passano
-> attraverso: e' un motivo in piu' per preferire il ponte quando si e' in casa.
+> **Due avvertenze.** Finche' il collegamento e' diretto, le posizioni del
+> corpo non toccano nessun server; con il TURN ci passano attraverso — un
+> motivo in piu' per preferire il ponte quando si e' in casa. E le credenziali
+> stanno in chiaro in un repository pubblico, quindi chiunque le trovi puo'
+> consumare la quota: su un sito statico non c'e' modo di evitarlo, perche' il
+> browser deve riceverle e non c'e' un server che ne generi di temporanee. Il
+> danno e' limitato (piano di prova, nessun addebito oltre il limite: il TURN
+> smette e basta) e le credenziali si rigenerano dal pannello.
 
 ### E se sono sulla stessa wi-fi?
 
@@ -566,11 +572,16 @@ il **collegamento diretto**, e perche' funzioni ovunque serve un **TURN**.
 2. **Incollali in [`data/ice.json`](data/ice.json)**, accanto alle voci
    `stun:` che ci sono gia'. Non serve toccare il codice.
 3. **`git push`**, e aspetta un minuto che il sito si aggiorni.
-4. **Verifica su tutti e due i dispositivi**, con il browser vero, aprendo
+4. **Controlla le credenziali senza browser**: `python tools/prova-turn.py`
+   parla STUN/TURN direttamente e chiede al server di assegnare un relay. Se
+   risponde `credenziali valide, relay assegnato ...`, sono buone. E'
+   piu' netto del browser, che davanti a un fallimento non distingue fra
+   credenziali sbagliate, server spento e rete che filtra.
+5. **Verifica su tutti e due i dispositivi**, con il browser vero, aprendo
    `.../tools/banco-rete.html`. Deve dire **`SI TURN raggiungibile`**. Se
    dice "elencato ma irraggiungibile", le credenziali sono sbagliate: e'
    meglio scoprirlo adesso che davanti alla gente.
-5. **Fai una prova generale**: apri il sito sul computer, INIZIA, interruttore
+6. **Fai una prova generale**: apri il sito sul computer, INIZIA, interruttore
    **Telefono**, inquadra il QR. Provalo anche con il telefono **sotto rete
    mobile** invece che in wi-fi: e' la condizione piu' simile a quella che
    troverai.

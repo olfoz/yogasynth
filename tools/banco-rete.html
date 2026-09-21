@@ -58,8 +58,10 @@ fetch('../data/ice.json', { cache: 'no-cache' })
         var config = (d && d.iceServers && d.iceServers.length)
             ? { iceServers: d.iceServers }
             : { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+        // anche turns: (TURN dentro TLS), che il controllo su 'turn:' da solo
+        // non avrebbe riconosciuto
         var conTurn = config.iceServers.some(function (srv) {
-            return String(srv.urls).indexOf('turn:') === 0;
+            return /^turns?:/.test(String(srv.urls));
         });
 
         try {
