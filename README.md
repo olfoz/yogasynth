@@ -117,6 +117,7 @@ js/
 
 tools/
   serve.py              server locale + ponte verso il telefono
+  apri-firewall.ps1     apre la porta 8941 verso la rete locale, una volta sola
   build_asanas.py       genera data/asanas.json dagli angoli delle pose
   banco-logica.html     accordi, ordine delle note, punteggi delle rette
   banco-avatar.html     quanto l'avatar cade vicino ai giunti dell'asana
@@ -418,8 +419,13 @@ la connessione viene rifiutata in silenzio. Succede sempre se la Wi-Fi e'
 classificata **Public** (Windows la mette cosi' di suo su molte reti), perche'
 su quel profilo blocca in ingresso praticamente tutto.
 
-`serve.py` se ne accorge da solo e all'avvio stampa il comando. Va dato una
-volta sola, in un PowerShell aperto **come amministratore**:
+`serve.py` se ne accorge da solo e all'avvio stampa il comando. Il modo piu'
+sbrigativo e' [`tools/apri-firewall.ps1`](tools/apri-firewall.ps1): tasto
+destro -> *Esegui con PowerShell come amministratore*. Senza privilegi non
+combina niente e lo dice.
+
+Oppure a mano, una volta sola, in un PowerShell aperto **come
+amministratore**:
 
 ```powershell
 New-NetFirewallRule -DisplayName "yogasynth" -Direction Inbound `
@@ -438,7 +444,13 @@ Se dopo la regola ancora non va, in ordine:
    impostazioni del router): impedisce ai dispositivi di parlarsi fra loro.
    Sulle reti ospiti e' acceso di serie;
 3. **indirizzo sbagliato**: con VPN o schede virtuali, il computer ne ha piu'
-   di uno. All'avvio `serve.py` elenca anche gli altri: provali.
+   di uno. All'avvio `serve.py` elenca anche gli altri: provali;
+4. **l'indirizzo e' cambiato**: il router rinnova il contratto DHCP e il
+   computer prende un numero diverso. Un indirizzo annotato ieri oggi puo'
+   essere di un altro dispositivo, e il telefono dice "impossibile
+   raggiungere il sito" pur essendo tutto acceso e funzionante. Per questo
+   conviene **inquadrare il QR** invece di ricordarsi l'indirizzo: viene
+   rigenerato ogni volta e non puo' essere vecchio.
 
 > Mentre `serve.py` gira, la cartella del progetto e' raggiungibile da
 > chiunque sia sulla tua rete locale. Su una rete di casa va bene; su una
