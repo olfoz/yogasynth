@@ -140,6 +140,31 @@
         }
     }
     </script>
+    <script>
+    /*
+     * Rete di sicurezza per l'avvio.
+     *
+     * three.js e MediaPipe arrivano da un CDN. Se non arrivano — rete ospite
+     * che filtra, o niente internet — il modulo principale non parte mai e
+     * la pagina resta li', muta, senza un errore visibile. In una dimostrazione
+     * davanti a qualcuno e' lo scenario peggiore: non si capisce cosa sia
+     * successo. Qui, se dopo qualche secondo l'app non ha dato segno di vita,
+     * lo si dice.
+     */
+    window.__ysAvviata = false;
+    setTimeout(function () {
+        if (window.__ysAvviata) { return; }
+        var barra = document.getElementById('statusBar');
+        if (barra) {
+            barra.textContent = "L'app non e' partita: three.js o MediaPipe non sono arrivati. "
+                + "Serve una connessione, almeno al primo avvio.";
+        }
+        var testo = document.getElementById('chordPreview');
+        if (testo && !testo.textContent.trim()) {
+            testo.textContent = 'Nessuna connessione: le librerie non sono state scaricate.';
+        }
+    }, 9000);
+    </script>
     <script type="module" src="./js/main.js"></script>
 </body>
 </html>

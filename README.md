@@ -545,6 +545,48 @@ scrive il codice che compare sul computer.
 - three.js e MediaPipe arrivano da jsdelivr: pubblicando, l'app dipende da
   quel CDN.
 
+## Una dimostrazione fuori casa
+
+Fuori casa il ponte sulla rete locale non serve a niente: sei su una rete che
+non controlli, e le reti ospiti hanno quasi sempre l'isolamento client. Serve
+il **collegamento diretto**, e perche' funzioni ovunque serve un **TURN**.
+
+### Prima di uscire (dieci minuti, una volta sola)
+
+1. **Prendi un TURN.** [metered.ca](https://www.metered.ca/tools/openrelay/)
+   da' 20 GB al mese gratis — enormi: questo secondo schermo consuma circa
+   86 MB l'ora. Serve un account gratuito, e dal pannello si copiano
+   indirizzo, `username` e `credential`.
+2. **Incollali in [`data/ice.json`](data/ice.json)**, accanto alle voci
+   `stun:` che ci sono gia'. Non serve toccare il codice.
+3. **`git push`**, e aspetta un minuto che il sito si aggiorni.
+4. **Verifica su tutti e due i dispositivi**, con il browser vero, aprendo
+   `.../tools/banco-rete.html`. Deve dire **`SI TURN raggiungibile`**. Se
+   dice "elencato ma irraggiungibile", le credenziali sono sbagliate: e'
+   meglio scoprirlo adesso che davanti alla gente.
+5. **Fai una prova generale**: apri il sito sul computer, INIZIA, interruttore
+   **Telefono**, inquadra il QR. Provalo anche con il telefono **sotto rete
+   mobile** invece che in wi-fi: e' la condizione piu' simile a quella che
+   troverai.
+
+### Sul posto
+
+Computer: apri il sito, INIZIA, accendi **Telefono**. Telefono: inquadra il
+QR. Non c'e' altro da configurare, e non importa su che rete siete.
+
+### Se la rete del posto non collabora
+
+Piano B, senza dipendere da nessuno: **accendi l'hotspot del telefono** e fai
+collegare il computer a quello. Adesso siete su una rete che controlli tu,
+senza isolamento client, e torna a funzionare il ponte — piu' veloce e senza
+TURN. Serve la regola del firewall (`tools/apri-firewall.cmd`, doppio clic) e
+il sito servito in locale con `python tools/serve.py`.
+
+> Un avvertimento: three.js e MediaPipe arrivano da un CDN, quindi **al primo
+> avvio serve una connessione**. Se l'app non parte per questo motivo la
+> barra di stato lo dice, invece di restare muta — in una dimostrazione una
+> pagina nera senza spiegazione e' lo scenario peggiore.
+
 ### Parametri URL
 
 | parametro | effetto |

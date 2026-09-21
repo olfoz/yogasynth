@@ -666,6 +666,8 @@ function fillIntroText() {
 }
 
 (async function boot() {
+    // la rete di sicurezza in index.html aspetta questo segnale
+    window.__ysAvviata = true;
     try {
         data = await loadData();
     } catch (e) {
