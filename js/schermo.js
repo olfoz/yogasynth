@@ -78,6 +78,10 @@ export class Schermo {
      */
     static snapshot({ practice, res, uPts, fits, aspect, progress, state, audio, maxHarmonics }) {
         return {
+            // Marca temporale: sul canale diretto i messaggi possono
+            // arrivare fuori ordine (vedi js/peer.js), e uno stato vecchio
+            // che sorpassa uno nuovo farebbe sobbalzare il disegno.
+            t: Date.now(),
             aspect: r4(aspect),
             asana: practice.current ? practice.current.name : '',
             label: practice.current ? practice.current.label : '',

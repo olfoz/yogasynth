@@ -274,8 +274,16 @@
      */
     var sorgente = null;
 
+    var ultimoT = 0;
+
     function accetta(data, via) {
         if (sorgente && sorgente !== via) { return; }   // il primo che arriva comanda
+        // sul canale diretto l'ordine non e' garantito: uno stato piu'
+        // vecchio di quello gia' disegnato si butta
+        if (data && data.t) {
+            if (data.t < ultimoT) { return; }
+            ultimoT = data.t;
+        }
         sorgente = via;
         snap = data;
         lastUpdate = Date.now();

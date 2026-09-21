@@ -310,17 +310,25 @@ presentazioni passano da un servizio esterno (il broker pubblico di PeerJS) e
 passano solo le presentazioni: le posizioni del corpo viaggiano dirette e non
 toccano nessun server.
 
-> **Non verificato end-to-end.** Il codice compila e la logica c'e', ma
-> l'ambiente di prova di questo progetto (Chrome headless) ha WebRTC
-> disattivato — non raccoglie nemmeno i candidati locali — e i WebSocket in
-> uscita restano appesi. Per sapere se funziona da te, apri
-> **`/tools/banco-rete.html` nel browser vero** (e sul telefono): dice in
-> pochi secondi se WebRTC, STUN e il WebSocket verso il broker funzionano.
-> Poi `/tools/banco-peer.html` prova il giro completo.
->
-> Se il WebSocket verso il broker e' bloccato ma WebRTC e STUN funzionano, la
-> strada resta percorribile con un servizio di presentazioni diverso,
-> ospitato da te.
+**Verificato**, con `/tools/banco-peer.html` in un browser vero: broker
+raggiunto in 644 ms, canale diretto aperto in 2,1 s, aggiornamenti arrivati
+interi e in ordine. Chrome headless non serve a niente per questa prova — ha
+WebRTC disattivato e non raccoglie nemmeno i candidati locali.
+
+Su una rete nuova conviene cominciare da `/tools/banco-rete.html`, sempre nel
+browser vero: dice in pochi secondi se WebRTC, STUN e il WebSocket verso il
+broker funzionano da li'.
+
+**Nota sul canale.** Il telefono lo apre con `reliable: false`, che in PeerJS
+1.5 non significa quello che sembra: quel valore finisce solo in
+`ordered: !!reliable` sul DataChannel, quindi il canale resta affidabile ma
+NON ordinato. Va bene (niente blocco in testa alla coda), ma un aggiornamento
+puo' sorpassare il precedente: per questo ogni stato porta una marca
+temporale e il telefono scarta quelli superati.
+
+I primissimi aggiornamenti dopo che un telefono si collega possono andare
+persi: il lato computer registra la connessione un attimo dopo il telefono.
+A venti aggiornamenti al secondo non si nota.
 
 **Quale scegliere.** Se sei a casa e puoi dare una volta il comando del
 firewall, il ponte e' piu' semplice e non dipende da nessuno. Il collegamento

@@ -88,6 +88,7 @@ try {
     if (aperto) {
         // stesso pacchetto che manda l'app
         const snap = {
+            t: Date.now(),
             aspect: 1.3333, asana: 'Uttanasana', chord: 'Dsus2',
             step: 'Passo 3/11', progress: 0.62, done: false,
             body: { nose: [0.556, 0.802], lHip: [0.5, 0.52], rHip: [0.52, 0.52] },
@@ -98,6 +99,7 @@ try {
         const peso = JSON.stringify(snap).length;
 
         for (let i = 0; i < 5; i++) {
+            snap.t = Date.now();
             snap.progress = 0.1 * i;
             host.send(snap);
             await new Promise(r => setTimeout(r, 120));
@@ -109,6 +111,14 @@ try {
         } else {
             no('ricevuti solo ' + ricevuti.length + ' aggiornamenti su 5');
         }
+        let fuoriOrdine = 0;
+        for (let i = 1; i < ricevuti.length; i++) {
+            if (ricevuti[i].t < ricevuti[i - 1].t) fuoriOrdine++;
+        }
+        fuoriOrdine
+            ? dire('  (' + fuoriOrdine + ' arrivati fuori ordine: la marca temporale li scarta)')
+            : ok('arrivati in ordine');
+
         const ultimo = ricevuti[ricevuti.length - 1];
         if (ultimo && ultimo.asana === 'Uttanasana' && ultimo.rays && ultimo.rays.length === 1) {
             ok('il contenuto arriva intatto: ' + ultimo.asana + ' / ' + ultimo.chord

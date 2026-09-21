@@ -152,6 +152,14 @@ export class PeerHost {
      * Se un canale e' gia' ingolfato si salta il giro: meglio perdere un
      * aggiornamento che accumulare ritardo. Sono posizioni dal vivo, quella
      * vecchia non serve a nessuno.
+     *
+     * Nota sul canale: il telefono lo apre con `reliable: false`, che in
+     * PeerJS 1.5 non significa quello che sembra. Guardando il codice, quel
+     * valore finisce solo in `ordered: !!reliable` sul DataChannel: il canale
+     * resta affidabile, ma NON ordinato. Va benissimo (niente blocco in testa
+     * alla coda), a patto di accorgersi che un aggiornamento puo' sorpassare
+     * il precedente — per questo lo stato porta una marca temporale e il
+     * telefono scarta quelli superati.
      */
     send(snap) {
         for (const conn of this.connessioni) {
