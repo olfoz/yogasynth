@@ -24,6 +24,15 @@
 const PEERJS_URL = 'https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js';
 const ICE_URL = 'data/ice.json';
 
+// Aggiornamenti al secondo sul collegamento diretto.
+//
+// Piu' bassi di quelli del ponte (20), e non per prestazioni: quando la
+// strada diretta non c'e', i dati passano dal TURN, e il piano gratuito di
+// un TURN si misura in poche centinaia di megabyte al mese. A circa 1,2 kB
+// per aggiornamento, dodici al secondo fanno ~50 MB l'ora invece di ~86.
+// Il movimento resta fluido: il telefono guarda, non deve reagire.
+const HZ_DIRETTO = 12;
+
 // Se data/ice.json non si carica si va avanti con il minimo indispensabile.
 // Con il solo STUN il collegamento riesce quando una strada diretta esiste,
 // e fallisce con "Negotiation ... failed" quando non esiste.
@@ -106,6 +115,7 @@ export class PeerHost {
         this.onStato = onStato || function () {};
         this.peer = null;
         this.connessioni = [];
+        this._ultimoInvio = 0;
         this.codice = null;
         this.attivo = false;
         this._tentativi = 0;
@@ -196,6 +206,11 @@ export class PeerHost {
      * telefono scarta quelli superati.
      */
     send(snap) {
+        if (!this.connessioni.length) return;
+        const ora = performance.now();
+        if (ora - this._ultimoInvio < 1000 / HZ_DIRETTO) return;
+        this._ultimoInvio = ora;
+
         for (const conn of this.connessioni) {
             try {
                 if (conn.dataChannel && conn.dataChannel.bufferedAmount > 64 * 1024) continue;

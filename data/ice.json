@@ -1,27 +1,28 @@
 {
   "_doc": {
     "cosa": "Server che aiutano computer e telefono a trovare una strada per parlarsi (WebRTC). Li leggono sia il computer (js/peer.js) sia il telefono (schermo.html).",
-
     "stun": "Dice a ogni dispositivo qual e' il suo indirizzo visto da fuori. Non trasporta niente, e' gratis e non serve registrarsi. Basta quando una strada diretta fra i due dispositivi esiste.",
-
     "turn": "Serve quando quella strada NON esiste: reti diverse con NAT che non si lasciano attraversare, oppure un router con l'isolamento client acceso. In quel caso i dati passano dal TURN.",
-
     "perche_manca": "Qui sotto non c'e' nessun TURN, di proposito. I server pubblici con credenziali libere sono finiti: openrelay.metered.ca e' spento (muto su UDP 80, 443 e 3478, e TCP 443 chiude subito), mentre freeturn, anyfirewall e viagenie non risolvono piu' nemmeno il nome. Lasciarne uno morto qui dentro non aiuta: allunga la raccolta dei candidati e fa dire al banco 'TURN elencato ma irraggiungibile'.",
-
-    "come_averne_uno": "Entrambi quelli ancora vivi vogliono un account gratuito, e danno username e password da incollare qui dentro: metered.ca (relay.metered.ca) e Cloudflare (turn.cloudflare.com). Chi ha un server suo puo' installarci coturn.",
-
+    "come_averne_uno": "Su metered.ca, pannello -> TURN Server -> Credentials: si copiano l'indirizzo (di solito turn:<nome-app>.metered.live:80) e la coppia username/credential. Vanno aggiunti alla lista iceServers qui sotto, accanto alle voci stun:. Il piano di prova e' da 500 MB al mese e il TURN smette di funzionare se lo superi.",
     "esempio_metered": {
-      "urls": "turn:relay.metered.ca:80",
-      "username": "METTI_IL_TUO",
-      "credential": "METTI_LA_TUA"
+      "_nota": "Sostituisci i tre valori con i tuoi e sposta questo blocco dentro iceServers.",
+      "urls": "turn:yogasynth.metered.live:80",
+      "username": "INCOLLA_USERNAME",
+      "credential": "INCOLLA_CREDENTIAL"
     },
-
-    "prima_di_tutto": "Se computer e telefono sono in casa sulla stessa rete, il TURN non serve: conviene il ponte HTTP (tools/serve.py), che e' piu' veloce, non dipende da nessuno e non manda niente fuori. Vedi il README."
+    "prima_di_tutto": "Se computer e telefono sono in casa sulla stessa rete, il TURN non serve: conviene il ponte HTTP (tools/serve.py), che e' piu' veloce, non dipende da nessuno e non manda niente fuori. Vedi il README.",
+    "quanto_consuma": "Circa 1,2 kB per aggiornamento, dodici volte al secondo: ~50 MB l'ora, ma SOLO quando il TURN entra davvero in gioco. Se i due dispositivi si parlano direttamente, il contatore non si muove."
   },
-
   "iceServers": [
-    { "urls": "stun:stun.l.google.com:19302" },
-    { "urls": "stun:stun1.l.google.com:19302" },
-    { "urls": "stun:stun.cloudflare.com:3478" }
+    {
+      "urls": "stun:stun.l.google.com:19302"
+    },
+    {
+      "urls": "stun:stun1.l.google.com:19302"
+    },
+    {
+      "urls": "stun:stun.cloudflare.com:3478"
+    }
   ]
 }

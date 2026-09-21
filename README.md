@@ -553,10 +553,16 @@ il **collegamento diretto**, e perche' funzioni ovunque serve un **TURN**.
 
 ### Prima di uscire (dieci minuti, una volta sola)
 
-1. **Prendi un TURN.** [metered.ca](https://www.metered.ca/tools/openrelay/)
-   da' 20 GB al mese gratis — enormi: questo secondo schermo consuma circa
-   86 MB l'ora. Serve un account gratuito, e dal pannello si copiano
-   indirizzo, `username` e `credential`.
+1. **Prendi un TURN.** [metered.ca](https://www.metered.ca/) ne da' uno
+   gratuito. Il piano di prova e' da **500 MB al mese**, non di piu': dal
+   pannello si copiano indirizzo, `username` e `credential`.
+
+   Quanto durano 500 MB: sul collegamento diretto si mandano circa 1,2 kB
+   dodici volte al secondo, cioe' **~50 MB l'ora**. Bastano per una decina
+   di ore al mese, piu' che abbastanza per una dimostrazione, ma non per
+   praticarci tutti i giorni. E il consumo c'e' **solo quando il TURN entra
+   in gioco**: se i due dispositivi si parlano direttamente, e in casa sulla
+   stessa rete succede spesso, il contatore non si muove.
 2. **Incollali in [`data/ice.json`](data/ice.json)**, accanto alle voci
    `stun:` che ci sono gia'. Non serve toccare il codice.
 3. **`git push`**, e aspetta un minuto che il sito si aggiorni.
