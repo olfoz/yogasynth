@@ -22,7 +22,12 @@
 // e non toccano nessun server.
 
 const PEERJS_URL = 'https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js';
-const ICE_URL = 'data/ice.json';
+// Risolto rispetto a QUESTO modulo, non alla pagina che lo importa.
+// Con un indirizzo relativo semplice, 'data/ice.json' diventava
+// /tools/data/ice.json quando a importarlo era un banco dentro tools/:
+// 404, ripiego silenzioso sul minimo senza TURN, e la modalita' relay
+// falliva dicendo "nessun TURN configurato" mentre il file era a posto.
+const ICE_URL = new URL('../data/ice.json', import.meta.url).href;
 
 // Aggiornamenti al secondo sul collegamento diretto.
 //

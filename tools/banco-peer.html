@@ -89,7 +89,7 @@ try {
     const { PeerHost, caricaPeerJS, nuovoCodice, caricaIce } = await import('../js/peer.js?v=' + Date.now());
 
     const ice = await caricaIce();
-    const conTurn = ice.iceServers.some(s => String(s.urls).indexOf('turn:') === 0);
+    const conTurn = ice.iceServers.some(s => /^turns?:/.test(String(s.urls)));
     dire(soloRelay
         ? "modalita RELAY: tutto obbligato a passare dal TURN"
         : "modalita normale: si prende la strada che c'e' (in casa e' quasi sempre diretta)");
