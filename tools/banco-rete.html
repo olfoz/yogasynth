@@ -23,7 +23,11 @@
  * esiste piu'. Un indirizzo mai visto non e' in cache: arriva fresco.
  */
 if (!/[?&]v=/.test(location.search)) {
-    location.replace(location.pathname + '?v=' + Date.now() + location.hash);
+    // si CONSERVA quello che c'era gia' nell'indirizzo: con location.pathname
+    // da solo, aprire "...?relay=1" faceva rimbalzare su "...?v=123" e il
+    // relay=1 spariva per strada, in silenzio
+    var sep = location.search ? '&' : '?';
+    location.replace(location.pathname + location.search + sep + 'v=' + Date.now() + location.hash);
 }
 </script>
 </head>
