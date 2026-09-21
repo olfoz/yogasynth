@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<title>banco di prova — schermo del telefono</title>
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+        width: 100%; height: 100%;
+        background: #05060b; color: #e9ecf5; overflow: hidden;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    canvas { position: absolute; top: 0; left: 0; display: block; }
+    .bar { position: absolute; left: 0; right: 0; padding: 12px 18px; pointer-events: none; }
+    .bar.top { top: 0; }
+    .bar.bottom { bottom: 0; }
+    #asana { font-size: 5.4vmin; font-weight: 700; }
+    #chord {
+        display: inline-block;
+        font-size: 4.2vmin; font-weight: 700; color: #cbb6ff;
+        margin-top: 2px;
+    }
+    #step  { font-size: 3vmin; color: #8b93ad; margin-top: 2px; }
+    #cue   { font-size: 3.2vmin; color: #cfd5e6; line-height: 1.35; }
+    #notes { margin-bottom: 8px; }
+    .note {
+        display: inline-block; font-size: 3.4vmin; font-weight: 700;
+        padding: 3px 12px; margin: 0 6px 6px 0; border-radius: 999px;
+        border: 2px solid currentColor; opacity: 0.3;
+    }
+    .note.on { opacity: 1; }
+</style>
+</head>
+<body>
+    <canvas id="sky"></canvas>
+    <div class="bar top">
+        <div id="asana">&mdash;</div>
+        <div id="chord"></div>
+        <div id="step"></div>
+    </div>
+    <div class="bar bottom">
+        <div id="notes"></div>
+        <div id="cue"></div>
+    </div>
+
+<script src="../js/schermoView.js"></script>
+<script>
+/*
+ * Disegna una posa finta con SchermoView, senza rete.
+ *
+ * Esiste perche' schermo.html tiene sempre una richiesta appesa al server, e
+ * una pagina che aspetta la rete Chrome headless non la fotografa mai: il
+ * disegno va provato staccato dal trasporto.
+ *
+ *   chrome --headless=new --enable-unsafe-swiftshader --virtual-time-budget=8000
+ *          --window-size=430,880 --screenshot=tel.png
+ *          http://127.0.0.1:8941/tools/banco-schermo.html
+ */
+var SNAP = {
+    aspect: 1.3333,
+    asana: 'Uttanasana',
+    step: 'Passo 3/11 · Uttanasana',
+    cue: 'Gambe a piombo, busto che cade lungo il loro raggio. Le braccia sono piegate: due raggi distinti, quindi una quarta nota.',
+    chord: 'Dsus2',
+    progress: 0.62,
+    done: false,
+    body: {
+        nose: [0.556, 0.802],
+        lShoulder: [0.536, 0.690], rShoulder: [0.556, 0.690],
+        lElbow: [0.586, 0.772], rElbow: [0.606, 0.772],
+        lWrist: [0.540, 0.888], rWrist: [0.560, 0.888],
+        lHip: [0.500, 0.520], rHip: [0.520, 0.520],
+        lKnee: [0.502, 0.710], rKnee: [0.522, 0.710],
+        lAnkle: [0.500, 0.898], rAnkle: [0.520, 0.898],
+        shoulderMid: [0.546, 0.690], hipMid: [0.510, 0.520]
+    },
+    rays: [
+        { id: 'spine', label: 'Spina dorsale', color: '#7C4DFF', note: 'D2',
+          segs: [['hipMid', 'shoulderMid'], ['shoulderMid', 'nose']],
+          score: 0.93, active: true, harmonics: 5, maxHarmonics: 8,
+          fit: { cx: 0.537, cy: 0.670, dx: 0.155, dy: 0.988 } },
+        { id: 'upperArms', label: 'Braccia', color: '#00E5FF', note: 'E3',
+          segs: [['lElbow', 'lShoulder'], ['lShoulder', 'rShoulder'], ['rShoulder', 'rElbow']],
+          score: 0.78, active: true, harmonics: 2, maxHarmonics: 8,
+          fit: { cx: 0.571, cy: 0.731, dx: 0.530, dy: 0.848 } },
+        { id: 'legs', label: 'Arti inferiori', color: '#FFB300', note: 'A3',
+          segs: [['lAnkle', 'lKnee'], ['lKnee', 'lHip'], ['lHip', 'rHip'], ['rHip', 'rKnee'], ['rKnee', 'rAnkle']],
+          score: 0.41, active: false, harmonics: 0, maxHarmonics: 8,
+          fit: { cx: 0.511, cy: 0.709, dx: 0.021, dy: 0.999 } },
+        { id: 'foreArms', label: 'Avambracci', color: '#69F0AE', note: 'D4',
+          segs: [['lWrist', 'lElbow'], ['lElbow', 'rElbow'], ['rElbow', 'rWrist']],
+          score: 0.55, active: false, harmonics: 0, maxHarmonics: 8,
+          fit: { cx: 0.573, cy: 0.830, dx: -0.686, dy: 0.728 } }
+    ]
+};
+
+var view = new window.SchermoView(document.getElementById('sky'));
+var els = {
+    asana: document.getElementById('asana'),
+    chord: document.getElementById('chord'),
+    step: document.getElementById('step'),
+    cue: document.getElementById('cue'),
+    notes: document.getElementById('notes')
+};
+
+function draw() {
+    view.resize(window.innerWidth, window.innerHeight);
+    view.render(SNAP, 0.4);
+    view.text(SNAP, els);
+}
+window.addEventListener('resize', draw);
+draw();
+</script>
+</body>
+</html>

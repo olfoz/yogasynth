@@ -1,0 +1,297 @@
+// Le rette dell'asana: come si costruiscono, come si misura quanto il corpo
+// ci si e' adagiato sopra.
+//
+// Un raggio vale due cose insieme:
+//   - ALLINEAMENTO: i segmenti del corpo puntano nella direzione che l'asana
+//     chiede (e' questo asana e non un altro);
+//   - RETTITUDINE: i giunti di quel raggio stanno davvero su una retta
+//     (il corpo e' adagiato sul raggio, non piegato attraverso).
+// Il punteggio combinato pilota sia il colore del raggio sia la purezza
+// della nota corrispondente.
+
+// Soglia di visibilita' sotto la quale un giunto si considera perso.
+//
+// Tenuta bassa apposta. MediaPipe continua a stimare i giunti che escono dal
+// bordo, e quelle stime sono buone finche' l'arto e' appena fuori: scartarle
+// costringerebbe a stare piu' lontani dalla webcam solo per far entrare le
+// caviglie nell'inquadratura. Il punteggio pesa comunque ogni segmento per
+// quanto ci si puo' fidare (vedi rayScore).
+const MIN_VISIBILITY = 0.25;
+
+// Sotto questa quota di retta effettivamente vista, la retta non si giudica
+// affatto: meglio dire "fuori campo" che dare un voto a un'ipotesi.
+const MIN_COVERAGE = 0.4;
+
+// Nomi dei giunti -> indici dei landmark MediaPipe Pose.
+export const LM_MAP = {
+    nose: 0,
+    lShoulder: 11, rShoulder: 12,
+    lElbow: 13, rElbow: 14,
+    lWrist: 15, rWrist: 16,
+    lHip: 23, rHip: 24,
+    lKnee: 25, rKnee: 26,
+    lAnkle: 27, rAnkle: 28
+};
+
+// Ordine delle note imposto dall'app, indipendente da come l'asana elenca
+// le sue rette: la spina dorsale e' sempre la prima nota (la fondamentale
+// nel basso), gli arti superiori la seconda, gli inferiori la terza. Le
+// rette in piu' richieste dall'asana vengono dopo, nell'ordine dei dati.
+const NOTE_ORDER = ['spine', 'arms', 'upperArms', 'legs'];
+
+export function orderRaysForNotes(rayIds) {
+    const known = NOTE_ORDER.filter(id => rayIds.includes(id));
+    const extra = rayIds.filter(id => !NOTE_ORDER.includes(id));
+    return known.concat(extra);
+}
+
+/** Quanto ci si puo' fidare di un punto: 1 se non e' detto altrimenti. */
+function conf(p) {
+    return (p && p.conf !== undefined) ? p.conf : 1;
+}
+
+export function addMidpoints(pts) {
+    if (pts.lShoulder && pts.rShoulder) {
+        pts.shoulderMid = {
+            x: (pts.lShoulder.x + pts.rShoulder.x) / 2,
+            y: (pts.lShoulder.y + pts.rShoulder.y) / 2,
+            conf: Math.min(conf(pts.lShoulder), conf(pts.rShoulder))
+        };
+    }
+    if (pts.lHip && pts.rHip) {
+        pts.hipMid = {
+            x: (pts.lHip.x + pts.rHip.x) / 2,
+            y: (pts.lHip.y + pts.rHip.y) / 2,
+            conf: Math.min(conf(pts.lHip), conf(pts.rHip))
+        };
+    }
+    return pts;
+}
+
+/** Landmark dell'asana (gia' in spazio isotropo) -> punti nominati. */
+export function asanaPoints(asana) {
+    const pts = {};
+    for (const k in asana.landmarks) {
+        pts[k] = { x: asana.landmarks[k][0], y: asana.landmarks[k][1] };
+    }
+    return addMidpoints(pts);
+}
+
+/** Versione specchiata: l'utente puo' mettersi di profilo da un lato o dall'altro. */
+export function mirrorPoints(pts) {
+    const out = {};
+    for (const k in pts) {
+        const mk = k.startsWith('l') ? 'r' + k.slice(1)
+                 : k.startsWith('r') ? 'l' + k.slice(1)
+                 : k;
+        out[mk] = { x: 1 - pts[k].x, y: pts[k].y };
+    }
+    return addMidpoints(out);
+}
+
+/**
+ * Landmark MediaPipe -> punti nominati in spazio isotropo (x specchiata per
+ * l'effetto selfie e moltiplicata per l'aspect, cosi' gli angoli sono reali).
+ */
+export function userPoints(landmarks, aspect) {
+    if (!landmarks) return null;
+    const pts = {};
+    let any = false;
+    for (const k in LM_MAP) {
+        const l = landmarks[LM_MAP[k]];
+        const v = (l && l.visibility !== undefined) ? l.visibility : 1;
+        if (l && v > MIN_VISIBILITY) {
+            pts[k] = { x: (1 - l.x) * aspect, y: l.y, conf: v };
+            any = true;
+        }
+    }
+    return any ? addMidpoints(pts) : null;
+}
+
+/**
+ * Retta ai minimi quadrati (PCA) su un insieme di punti.
+ * @returns {{collinearity, cx, cy, dirx, diry, tMin, tMax}|null}
+ */
+export function fitLine(points) {
+    const valid = points.filter(Boolean);
+    if (valid.length < 2) return null;
+
+    const n = valid.length;
+    const mx = valid.reduce((s, p) => s + p.x, 0) / n;
+    const my = valid.reduce((s, p) => s + p.y, 0) / n;
+
+    let Sxx = 0, Syy = 0, Sxy = 0;
+    for (const p of valid) {
+        const dx = p.x - mx, dy = p.y - my;
+        Sxx += dx * dx; Syy += dy * dy; Sxy += dx * dy;
+    }
+    Sxx /= n; Syy /= n; Sxy /= n;
+
+    const tr = Sxx + Syy;
+    const det = Sxx * Syy - Sxy * Sxy;
+    const disc = Math.max(0, tr * tr / 4 - det);
+    const L1 = tr / 2 + Math.sqrt(disc);
+    const L2 = Math.max(0, tr / 2 - Math.sqrt(disc));
+    if (L1 < 1e-9) return null;
+
+    let dirx, diry;
+    if (Math.abs(Sxy) > 1e-12) {
+        dirx = L1 - Syy; diry = Sxy;
+    } else {
+        dirx = Sxx >= Syy ? 1 : 0;
+        diry = Sxx >= Syy ? 0 : 1;
+    }
+    const mag = Math.hypot(dirx, diry) || 1;
+    dirx /= mag; diry /= mag;
+
+    // quanto i punti si stringono sulla retta: 1 = perfettamente allineati
+    const collinearity = Math.max(0, 1 - Math.sqrt(L2 / L1) * 2.2);
+
+    let tMin = Infinity, tMax = -Infinity;
+    for (const p of valid) {
+        const t = (p.x - mx) * dirx + (p.y - my) * diry;
+        if (t < tMin) tMin = t;
+        if (t > tMax) tMax = t;
+    }
+
+    return { collinearity, cx: mx, cy: my, dirx, diry, tMin, tMax };
+}
+
+/** Accordo angolare fra due direzioni, senza verso: 1 = parallele, 0 oltre 60 gradi. */
+function dirAgreement(ax, ay, bx, by) {
+    const dot = Math.abs(ax * bx + ay * by);
+    const ang = Math.acos(Math.max(-1, Math.min(1, dot)));
+    return Math.max(0, 1 - ang / (Math.PI / 3));
+}
+
+/** Accordo angolare fra due segmenti, con verso. */
+function segAgreement(uPts, tPts, a, b) {
+    const ua = uPts[a], ub = uPts[b], ta = tPts[a], tb = tPts[b];
+    if (!ua || !ub || !ta || !tb) return null;
+    const uAng = Math.atan2(ub.y - ua.y, ub.x - ua.x);
+    const tAng = Math.atan2(tb.y - ta.y, tb.x - ta.x);
+    let d = Math.abs(uAng - tAng);
+    if (d > Math.PI) d = 2 * Math.PI - d;
+    return Math.max(0, 1 - d / (Math.PI / 3));
+}
+
+/**
+ * Costruisce le rette di un asana nell'ordine in cui diventano note.
+ * @returns {Array<{id, label, color, rgb, joints, segs, noteIndex}>}
+ */
+export function buildAsanaRays(asana, rayLibrary) {
+    const ids = orderRaysForNotes(asana.rays || ['spine', 'arms', 'legs']);
+    return ids.map((id, noteIndex) => {
+        const def = rayLibrary[id];
+        if (!def) throw new Error('Retta sconosciuta nei dati: ' + id);
+        const joints = def.joints;
+        const segs = [];
+        for (let i = 0; i < joints.length - 1; i++) segs.push([joints[i], joints[i + 1]]);
+        return { id, label: def.label, color: def.color, rgb: def.rgb, joints, segs, noteIndex };
+    });
+}
+
+/**
+ * Punteggio di una retta: allineamento all'asana + rettitudine del corpo.
+ *
+ * Ogni segmento pesa quanto ci si fida dei suoi estremi, e la media e' pesata
+ * invece che divisa per il numero di segmenti. Cosi' una retta vista per tre
+ * quarti prende comunque un voto pieno se quei tre quarti sono a posto: e'
+ * quello che permette di stare vicini alla webcam con un piede che sbuca dal
+ * bordo, invece di dover arretrare finche' non ci sta tutto.
+ */
+export function rayScore(ray, uPts, tPts) {
+    const none = { score: 0, alignment: 0, straightness: 0, coverage: 0 };
+    if (!uPts) return none;
+
+    let sum = 0, weight = 0;
+    for (const [a, b] of ray.segs) {
+        const s = segAgreement(uPts, tPts, a, b);
+        if (s === null) continue;
+        const w = Math.min(conf(uPts[a]), conf(uPts[b]));
+        sum += w * s;
+        weight += w;
+    }
+
+    const coverage = weight / ray.segs.length;
+    if (coverage < MIN_COVERAGE) return Object.assign({}, none, { coverage });
+    const alignment = sum / weight;
+
+    // rettitudine, misurata sul bersaglio: le rette che l'asana stesso non
+    // ha dritte (la spina in Uttanasana, per esempio) non devono chiedere
+    // all'utente piu' di quanto chieda l'asana
+    const uFit = fitLine(ray.joints.map(j => uPts[j]));
+    const tFit = fitLine(ray.joints.map(j => tPts[j]));
+    let straightness = 0;
+    if (uFit && tFit) {
+        const deficit = Math.max(0, tFit.collinearity - uFit.collinearity);
+        straightness = Math.max(0, 1 - deficit / 0.35);
+        // e comunque la retta dell'utente deve avere la giacitura giusta
+        straightness *= dirAgreement(uFit.dirx, uFit.diry, tFit.dirx, tFit.diry);
+    }
+
+    return {
+        score: 0.6 * alignment + 0.4 * straightness,
+        alignment,
+        straightness,
+        coverage,
+        fit: uFit,
+        targetFit: tFit
+    };
+}
+
+/**
+ * Smussa i punteggi nel tempo, decide l'isteresi acceso/spento e sceglie da
+ * solo se l'asana va confrontato dritto o specchiato (l'utente puo' mettersi
+ * di profilo rivolto da una parte o dall'altra).
+ */
+export class RayTracker {
+    constructor() {
+        this.setRays([]);
+    }
+
+    setRays(rays) {
+        this.rays = rays;
+        this.smooth = rays.map(() => 0);
+        this.active = rays.map(() => false);
+        this.mirrored = false;
+    }
+
+    reset() {
+        this.smooth = this.rays.map(() => 0);
+        this.active = this.rays.map(() => false);
+    }
+
+    update(uPts, tPts, tPtsMirror) {
+        const n = this.rays.length;
+        let raw = new Array(n).fill(0);
+        let details = new Array(n).fill(null);
+
+        if (uPts && n) {
+            const dir = this.rays.map(r => rayScore(r, uPts, tPts));
+            const mir = this.rays.map(r => rayScore(r, uPts, tPtsMirror));
+            const totD = dir.reduce((s, r) => s + r.score, 0);
+            const totM = mir.reduce((s, r) => s + r.score, 0);
+            // isteresi anche sullo specchio, altrimenti sfarfalla di continuo
+            if (this.mirrored && totD > totM + 0.15) this.mirrored = false;
+            if (!this.mirrored && totM > totD + 0.15) this.mirrored = true;
+            details = this.mirrored ? mir : dir;
+            raw = details.map(d => d.score);
+        }
+
+        for (let i = 0; i < n; i++) {
+            this.smooth[i] = this.smooth[i] * 0.72 + raw[i] * 0.28;
+            const s = this.smooth[i];
+            if (!this.active[i] && s > 0.72) this.active[i] = true;
+            if (this.active[i] && s < 0.58) this.active[i] = false;
+        }
+
+        return {
+            scores: this.smooth,
+            active: this.active,
+            mirrored: this.mirrored,
+            details,
+            coverage: details.map(d => (d ? d.coverage : 0))
+        };
+    }
+}

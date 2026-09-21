@@ -1,0 +1,628 @@
+{
+  "_doc": {
+    "_generato": "Non modificare a mano: questo file lo scrive tools/build_asanas.py a partire dagli angoli delle pose. Cosi' tutte le asana condividono lo stesso scheletro e le stesse lunghezze dei segmenti.",
+    "spazio": "Coordinate 2D normalizzate nel riquadro 0..1 x 0..1, y verso il basso (come MediaPipe). Il renderer ancora e scala la posa sul corpo reale, quindi conta la FORMA, non la posizione assoluta.",
+    "view": "'profile' = corpo di taglio rispetto alla telecamera (Surya Namaskara), 'front' = corpo frontale. L'avatar viene ruotato di conseguenza, la posa resta sempre rivolta verso la telecamera.",
+    "facing": "Solo per view=profile: verso in cui guarda il corpo nei dati. Il matcher prova comunque anche la versione specchiata, quindi l'utente puo' mettersi di profilo da un lato o dall'altro.",
+    "rays": "Le rette su cui adagiare il corpo. L'ordine delle note lo impone comunque l'app: spine -> 1a nota (fondamentale, nel basso), arti superiori -> 2a, arti inferiori -> 3a, rette in piu' -> note successive.",
+    "quality": "Qualita' dell'accordo dell'asana. La fondamentale non e' qui: viene dal circolo delle quinte, che avanza di una quinta a ogni cambio di asana.",
+    "rootMode": "'spiral' (default): il circolo delle quinte non si azzera mai. Con 11 passi e 12 posizioni ogni ripetizione del saluto entra in una tonalita' nuova e si torna a Do dopo dodici saluti. 'perRound': ogni ripetizione riparte da Do."
+  },
+  "rayLibrary": {
+    "spine": {
+      "label": "Spina dorsale",
+      "joints": [
+        "hipMid",
+        "shoulderMid",
+        "nose"
+      ],
+      "color": "#7C4DFF",
+      "rgb": "124,77,255"
+    },
+    "arms": {
+      "label": "Arti superiori",
+      "joints": [
+        "lWrist",
+        "lElbow",
+        "lShoulder",
+        "rShoulder",
+        "rElbow",
+        "rWrist"
+      ],
+      "color": "#00E5FF",
+      "rgb": "0,229,255"
+    },
+    "legs": {
+      "label": "Arti inferiori",
+      "joints": [
+        "lAnkle",
+        "lKnee",
+        "lHip",
+        "rHip",
+        "rKnee",
+        "rAnkle"
+      ],
+      "color": "#FFB300",
+      "rgb": "255,179,0"
+    },
+    "upperArms": {
+      "label": "Braccia",
+      "joints": [
+        "lElbow",
+        "lShoulder",
+        "rShoulder",
+        "rElbow"
+      ],
+      "color": "#00E5FF",
+      "rgb": "0,229,255"
+    },
+    "foreArms": {
+      "label": "Avambracci",
+      "joints": [
+        "lWrist",
+        "lElbow",
+        "rElbow",
+        "rWrist"
+      ],
+      "color": "#69F0AE",
+      "rgb": "105,240,174"
+    }
+  },
+  "asanas": [
+    {
+      "id": "tadasana",
+      "name": "Tadasana",
+      "label": "Montagna",
+      "view": "profile",
+      "facing": "right",
+      "quality": "major",
+      "rays": [
+        "spine",
+        "arms",
+        "legs"
+      ],
+      "cue": "Una sola colonna: caviglie, bacino, spalle e testa sullo stesso raggio.",
+      "angles": {
+        "spine": -90,
+        "head": -86,
+        "upperArm": 92,
+        "foreArm": 90,
+        "thigh": 90,
+        "shin": 90
+      },
+      "landmarks": {
+        "nose": [
+          0.5056,
+          0.1201
+        ],
+        "lShoulder": [
+          0.4886,
+          0.2203
+        ],
+        "rShoulder": [
+          0.5086,
+          0.2203
+        ],
+        "lElbow": [
+          0.4844,
+          0.3421
+        ],
+        "rElbow": [
+          0.5044,
+          0.3421
+        ],
+        "lWrist": [
+          0.4844,
+          0.4601
+        ],
+        "rWrist": [
+          0.5044,
+          0.4601
+        ],
+        "lHip": [
+          0.4886,
+          0.4853
+        ],
+        "rHip": [
+          0.5086,
+          0.4853
+        ],
+        "lKnee": [
+          0.4886,
+          0.6881
+        ],
+        "rKnee": [
+          0.5086,
+          0.6881
+        ],
+        "lAnkle": [
+          0.4886,
+          0.8799
+        ],
+        "rAnkle": [
+          0.5086,
+          0.8799
+        ]
+      }
+    },
+    {
+      "id": "urdhva-hastasana",
+      "name": "Urdhva Hastasana",
+      "label": "Braccia al cielo",
+      "view": "profile",
+      "facing": "right",
+      "quality": "major",
+      "rays": [
+        "spine",
+        "arms",
+        "legs"
+      ],
+      "cue": "Le braccia prolungano la spina dorsale verso l'alto: un unico raggio dai talloni alle dita.",
+      "angles": {
+        "spine": -92,
+        "head": -84,
+        "upperArm": -84,
+        "foreArm": -88,
+        "thigh": 90,
+        "shin": 90
+      },
+      "landmarks": {
+        "nose": [
+          0.5021,
+          0.19
+        ],
+        "lShoulder": [
+          0.4816,
+          0.2899
+        ],
+        "rShoulder": [
+          0.5016,
+          0.2899
+        ],
+        "lElbow": [
+          0.4943,
+          0.1687
+        ],
+        "rElbow": [
+          0.5143,
+          0.1687
+        ],
+        "lWrist": [
+          0.4984,
+          0.0508
+        ],
+        "rWrist": [
+          0.5184,
+          0.0508
+        ],
+        "lHip": [
+          0.4908,
+          0.5546
+        ],
+        "rHip": [
+          0.5108,
+          0.5546
+        ],
+        "lKnee": [
+          0.4908,
+          0.7575
+        ],
+        "rKnee": [
+          0.5108,
+          0.7575
+        ],
+        "lAnkle": [
+          0.4908,
+          0.9492
+        ],
+        "rAnkle": [
+          0.5108,
+          0.9492
+        ]
+      }
+    },
+    {
+      "id": "uttanasana",
+      "name": "Uttanasana",
+      "label": "Piegamento in avanti",
+      "view": "profile",
+      "facing": "right",
+      "quality": "sus2",
+      "rays": [
+        "spine",
+        "upperArms",
+        "legs",
+        "foreArms"
+      ],
+      "cue": "Gambe a piombo, busto che cade lungo il loro raggio. Le braccia sono piegate: due raggi distinti, quindi una quarta nota.",
+      "angles": {
+        "spine": 85,
+        "head": 78,
+        "upperArm": 108,
+        "foreArm": 22,
+        "thigh": 90,
+        "shin": 90
+      },
+      "landmarks": {
+        "nose": [
+          0.5038,
+          0.6502
+        ],
+        "lShoulder": [
+          0.4729,
+          0.5519
+        ],
+        "rShoulder": [
+          0.4929,
+          0.5519
+        ],
+        "lElbow": [
+          0.4353,
+          0.6678
+        ],
+        "rElbow": [
+          0.4553,
+          0.6678
+        ],
+        "lWrist": [
+          0.5447,
+          0.712
+        ],
+        "rWrist": [
+          0.5647,
+          0.712
+        ],
+        "lHip": [
+          0.4498,
+          0.288
+        ],
+        "rHip": [
+          0.4698,
+          0.288
+        ],
+        "lKnee": [
+          0.4498,
+          0.4908
+        ],
+        "rKnee": [
+          0.4698,
+          0.4908
+        ],
+        "lAnkle": [
+          0.4498,
+          0.6826
+        ],
+        "rAnkle": [
+          0.4698,
+          0.6826
+        ]
+      }
+    },
+    {
+      "id": "ardha-uttanasana",
+      "name": "Ardha Uttanasana",
+      "label": "Mezzo piegamento",
+      "view": "profile",
+      "facing": "right",
+      "quality": "sus2",
+      "rays": [
+        "spine",
+        "arms",
+        "legs"
+      ],
+      "cue": "Schiena piatta come un raggio orizzontale, perpendicolare al raggio delle gambe.",
+      "angles": {
+        "spine": 2,
+        "head": -8,
+        "upperArm": 108,
+        "foreArm": 112,
+        "thigh": 90,
+        "shin": 90
+      },
+      "landmarks": {
+        "nose": [
+          0.6821,
+          0.3003
+        ],
+        "lShoulder": [
+          0.5726,
+          0.3143
+        ],
+        "rShoulder": [
+          0.5926,
+          0.3143
+        ],
+        "lElbow": [
+          0.535,
+          0.4302
+        ],
+        "rElbow": [
+          0.555,
+          0.4302
+        ],
+        "lWrist": [
+          0.4908,
+          0.5396
+        ],
+        "rWrist": [
+          0.5108,
+          0.5396
+        ],
+        "lHip": [
+          0.3079,
+          0.3051
+        ],
+        "rHip": [
+          0.3279,
+          0.3051
+        ],
+        "lKnee": [
+          0.3079,
+          0.5079
+        ],
+        "rKnee": [
+          0.3279,
+          0.5079
+        ],
+        "lAnkle": [
+          0.3079,
+          0.6997
+        ],
+        "rAnkle": [
+          0.3279,
+          0.6997
+        ]
+      }
+    },
+    {
+      "id": "chaturanga-dandasana",
+      "name": "Chaturanga Dandasana",
+      "label": "Bastone su quattro appoggi",
+      "view": "profile",
+      "facing": "right",
+      "quality": "sus2",
+      "rays": [
+        "spine",
+        "upperArms",
+        "legs",
+        "foreArms"
+      ],
+      "cue": "Dalla testa ai talloni un raggio solo. Gomiti a novanta gradi: avambracci a piombo, secondo raggio.",
+      "angles": {
+        "spine": -8,
+        "head": -8,
+        "upperArm": 160,
+        "foreArm": 82,
+        "thigh": 172,
+        "shin": 172
+      },
+      "landmarks": {
+        "nose": [
+          0.8763,
+          0.4137
+        ],
+        "lShoulder": [
+          0.7668,
+          0.4277
+        ],
+        "rShoulder": [
+          0.7868,
+          0.4277
+        ],
+        "lElbow": [
+          0.6523,
+          0.4694
+        ],
+        "rElbow": [
+          0.6723,
+          0.4694
+        ],
+        "lWrist": [
+          0.6688,
+          0.5863
+        ],
+        "rWrist": [
+          0.6888,
+          0.5863
+        ],
+        "lHip": [
+          0.5044,
+          0.4646
+        ],
+        "rHip": [
+          0.5244,
+          0.4646
+        ],
+        "lKnee": [
+          0.3036,
+          0.4928
+        ],
+        "rKnee": [
+          0.3236,
+          0.4928
+        ],
+        "lAnkle": [
+          0.1137,
+          0.5195
+        ],
+        "rAnkle": [
+          0.1337,
+          0.5195
+        ]
+      }
+    },
+    {
+      "id": "urdhva-mukha-svanasana",
+      "name": "Urdhva Mukha Svanasana",
+      "label": "Cane a testa in su",
+      "view": "profile",
+      "facing": "right",
+      "quality": "minor",
+      "rays": [
+        "spine",
+        "arms",
+        "legs"
+      ],
+      "cue": "Braccia a piombo come colonne. Il busto sale in diagonale, le gambe scendono sulla diagonale opposta.",
+      "angles": {
+        "spine": -30,
+        "head": -18,
+        "upperArm": 88,
+        "foreArm": 90,
+        "thigh": 165,
+        "shin": 165
+      },
+      "landmarks": {
+        "nose": [
+          0.8531,
+          0.3646
+        ],
+        "lShoulder": [
+          0.7475,
+          0.3956
+        ],
+        "rShoulder": [
+          0.7675,
+          0.3956
+        ],
+        "lElbow": [
+          0.7518,
+          0.5174
+        ],
+        "rElbow": [
+          0.7718,
+          0.5174
+        ],
+        "lWrist": [
+          0.7518,
+          0.6354
+        ],
+        "rWrist": [
+          0.7718,
+          0.6354
+        ],
+        "lHip": [
+          0.5181,
+          0.5281
+        ],
+        "rHip": [
+          0.5381,
+          0.5281
+        ],
+        "lKnee": [
+          0.3221,
+          0.5806
+        ],
+        "rKnee": [
+          0.3421,
+          0.5806
+        ],
+        "lAnkle": [
+          0.1369,
+          0.6302
+        ],
+        "rAnkle": [
+          0.1569,
+          0.6302
+        ]
+      }
+    },
+    {
+      "id": "adho-mukha-svanasana",
+      "name": "Adho Mukha Svanasana",
+      "label": "Cane a testa in giu'",
+      "view": "profile",
+      "facing": "right",
+      "quality": "minor",
+      "rays": [
+        "spine",
+        "arms",
+        "legs"
+      ],
+      "cue": "Braccia e schiena sullo stesso raggio, dalle mani al bacino. Le gambe aprono il secondo lato della V.",
+      "angles": {
+        "spine": 42,
+        "head": 42,
+        "upperArm": 42,
+        "foreArm": 42,
+        "thigh": 111,
+        "shin": 111
+      },
+      "landmarks": {
+        "nose": [
+          0.6547,
+          0.5603
+        ],
+        "lShoulder": [
+          0.57,
+          0.4931
+        ],
+        "rShoulder": [
+          0.59,
+          0.4931
+        ],
+        "lElbow": [
+          0.6606,
+          0.5746
+        ],
+        "rElbow": [
+          0.6806,
+          0.5746
+        ],
+        "lWrist": [
+          0.7483,
+          0.6536
+        ],
+        "rWrist": [
+          0.7683,
+          0.6536
+        ],
+        "lHip": [
+          0.3731,
+          0.3158
+        ],
+        "rHip": [
+          0.3931,
+          0.3158
+        ],
+        "lKnee": [
+          0.3004,
+          0.5052
+        ],
+        "rKnee": [
+          0.3204,
+          0.5052
+        ],
+        "lAnkle": [
+          0.2317,
+          0.6842
+        ],
+        "rAnkle": [
+          0.2517,
+          0.6842
+        ]
+      }
+    }
+  ],
+  "sequences": {
+    "surya-namaskara-a": {
+      "name": "Surya Namaskara A",
+      "label": "Saluto al Sole A",
+      "root": "C",
+      "rootMode": "spiral",
+      "steps": [
+        "tadasana",
+        "urdhva-hastasana",
+        "uttanasana",
+        "ardha-uttanasana",
+        "chaturanga-dandasana",
+        "urdhva-mukha-svanasana",
+        "adho-mukha-svanasana",
+        "ardha-uttanasana",
+        "uttanasana",
+        "urdhva-hastasana",
+        "tadasana"
+      ]
+    }
+  }
+}

@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<title>banco di prova — sintassi</title>
+<style>
+    body { font: 13px/1.6 ui-monospace, Menlo, monospace; background: #0b0d16; color: #ddd; margin: 0; padding: 16px; }
+    pre { white-space: pre-wrap; }
+    .ok { color: #7fe08a; }
+    .no { color: #ff9a9a; font-weight: 700; }
+</style>
+</head>
+<body>
+<pre id="o">avvio…</pre>
+<script type="module">
+/*
+ * Controlla che TUTTO il codice compili: moduli, script classici e script
+ * scritti dentro le pagine.
+ *
+ * Esiste per un motivo preciso. In italiano gli apostrofi sono ovunque
+ * ("l'avatar", "non c'e'", "un'inquadratura"), e dentro una stringa
+ * delimitata da apici singoli spezzano la stringa. In un modulo ES l'errore
+ * si nota subito, perche' l'import fallisce; in uno script scritto dentro
+ * una pagina no: la pagina si carica, non esegue niente e resta muta. E'
+ * esattamente il sintomo della pagina bianca sul telefono.
+ *
+ *   chrome --headless=new --virtual-time-budget=30000 --dump-dom
+ *          http://127.0.0.1:8941/tools/banco-sintassi.html
+ */
+const MODULI = [
+    'js/main.js', 'js/sequence.js', 'js/fps.js', 'js/intro.js', 'js/poseClip.js',
+    'js/schermo.js', 'js/peer.js',
+    'js/music/theory.js', 'js/music/synth.js',
+    'js/pose/rays.js', 'js/pose/tracker.js',
+    'js/render/stage.js', 'js/render/raysView.js', 'js/render/glowBody.js',
+    'js/render/avatar.js', 'js/render/hud.js'
+];
+
+// script classici, non moduli
+const CLASSICI = ['js/schermoView.js'];
+
+// pagine di cui controllare gli script scritti dentro
+const PAGINE = ['index.html', 'schermo.html'];
+
+const L = [];
+const out = () => { document.getElementById('o').innerHTML = L.join('\n'); };
+const ok = m => { L.push('<span class="ok">ok  </span> ' + m); out(); };
+const no = m => { L.push('<span class="no">ROTTO</span> ' + m); out(); };
+
+let rotti = 0;
+
+/* new Function COMPILA senza eseguire: e' proprio il controllo che serve. */
+function compila(sorgente) {
+    new Function(sorgente);
+}
+
+async function testo(url) {
+    const res = await fetch('../' + url + '?v=' + Date.now(), { cache: 'no-store' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return res.text();
+}
+
+for (const m of MODULI) {
+    try {
+        // i moduli hanno import/export: new Function non li digerisce,
+        // li compila il browser importandoli
+        await import('../' + m + '?v=' + Date.now());
+        ok(m);
+    } catch (e) {
+        // main.js tocca il DOM dell'app appena caricato: un errore di
+        // esecuzione qui non e' un errore di sintassi
+        const msg = (e && e.message) || String(e);
+        if (/SyntaxError|Unexpected|Invalid or unexpected/.test(e && e.name + msg)) {
+            no(m + '  ->  ' + msg); rotti++;
+        } else {
+            ok(m + '  (compila; non eseguibile qui: ' + msg.slice(0, 60) + ')');
+        }
+    }
+}
+
+for (const c of CLASSICI) {
+    try { compila(await testo(c)); ok(c); }
+    catch (e) { no(c + '  ->  ' + ((e && e.message) || e)); rotti++; }
+}
+
+for (const p of PAGINE) {
+    let html;
+    try { html = await testo(p); }
+    catch (e) { no(p + '  ->  ' + ((e && e.message) || e)); rotti++; continue; }
+
+    const blocchi = [...html.matchAll(/<script(?![^>]*\bsrc=)([^>]*)>([\s\S]*?)<\/script>/g)];
+    if (!blocchi.length) { ok(p + '  (nessuno script scritto dentro)'); continue; }
+
+    let i = 0;
+    for (const b of blocchi) {
+        i++;
+        const attributi = b[1] || '';
+        const sorgente = b[2];
+        if (/type\s*=\s*["']?(importmap|application\/json)/.test(attributi)) {
+            try { JSON.parse(sorgente); ok(p + ' [' + i + '] importmap'); }
+            catch (e) { no(p + ' [' + i + '] importmap  ->  ' + e.message); rotti++; }
+            continue;
+        }
+        if (/type\s*=\s*["']?module/.test(attributi)) {
+            // un modulo scritto dentro la pagina: lo si compila come tale
+            const url = URL.createObjectURL(new Blob([sorgente], { type: 'text/javascript' }));
+            try { await import(url); ok(p + ' [' + i + '] modulo'); }
+            catch (e) {
+                const msg = (e && e.message) || String(e);
+                if (/SyntaxError|Unexpected/.test((e && e.name) + msg)) { no(p + ' [' + i + ']  ->  ' + msg); rotti++; }
+                else { ok(p + ' [' + i + '] modulo (compila)'); }
+            }
+            URL.revokeObjectURL(url);
+            continue;
+        }
+        try { compila(sorgente); ok(p + ' [' + i + '] script'); }
+        catch (e) { no(p + ' [' + i + ']  ->  ' + ((e && e.message) || e)); rotti++; }
+    }
+}
+
+L.push('');
+L.push(rotti
+    ? '<span class="no">' + rotti + ' file non compilano.</span>'
+    : '<span class="ok">TUTTO COMPILA</span>');
+out();
+</script>
+</body>
+</html>

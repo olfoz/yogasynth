@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>yogasynth — schermo</title>
+<style>
+    /* Niente di esotico, di proposito: questa pagina deve aprirsi anche su
+       un iPad vecchio. Nessun `inset`, nessun `backdrop-filter`, nessun
+       modulo ES. Se non si vede nulla, il pannello di stato lo dice. */
+    * { margin: 0; padding: 0; -webkit-box-sizing: border-box; box-sizing: border-box; }
+
+    html, body {
+        width: 100%;
+        height: 100%;
+        background: #05060b;
+        color: #e9ecf5;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        overflow: hidden;
+        -webkit-user-select: none;
+        user-select: none;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    canvas { position: absolute; top: 0; left: 0; display: block; }
+
+    .bar {
+        position: absolute;
+        left: 0;
+        right: 0;
+        padding: 12px 18px;
+        pointer-events: none;
+    }
+    .bar.top { top: 0; }
+    .bar.bottom { bottom: 0; }
+
+    /* Grande apposta: si legge a un paio di metri, spesso di sbieco. */
+    #asana { font-size: 5.4vmin; font-weight: 700; }
+    #chord {
+        display: inline-block;
+        font-size: 4.2vmin; font-weight: 700; color: #cbb6ff;
+        margin-top: 2px;
+    }
+    #step  { font-size: 3vmin; color: #8b93ad; margin-top: 2px; }
+    #cue   { font-size: 3.2vmin; color: #cfd5e6; line-height: 1.35; }
+
+    #notes { margin-bottom: 8px; }
+    .note {
+        display: inline-block;
+        font-size: 3.4vmin;
+        font-weight: 700;
+        padding: 3px 12px;
+        margin: 0 6px 6px 0;
+        border-radius: 999px;
+        border: 2px solid currentColor;
+        opacity: 0.3;
+    }
+    .note.on { opacity: 1; }
+
+    #panel {
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        display: -webkit-box;
+        display: flex;
+        -webkit-box-orient: vertical;
+        flex-direction: column;
+        -webkit-box-align: center;
+        align-items: center;
+        -webkit-box-pack: center;
+        justify-content: center;
+        text-align: center;
+        padding: 28px;
+        background: #05060b;
+        font-size: 4vmin;
+        line-height: 1.5;
+        color: #aab2c8;
+    }
+    #panel.hidden { display: none; }
+    #panel b { color: #e9ecf5; }
+    #panel .small { font-size: 3vmin; color: #8b93ad; margin-top: 14px; }
+    #panel .hidden { display: none; }
+    .codeRow { margin-top: 12px; }
+    .codeRow input {
+        font-size: 4.4vmin;
+        font-family: monospace;
+        padding: 10px 14px;
+        width: 46vmin;
+        border-radius: 10px;
+        border: 2px solid #7C4DFF;
+        background: #11142a;
+        color: #e9ecf5;
+        text-align: center;
+    }
+    .codeRow button {
+        font-size: 4vmin;
+        font-weight: 700;
+        padding: 10px 18px;
+        margin-left: 8px;
+        border-radius: 10px;
+        border: none;
+        background: #7C4DFF;
+        color: #fff;
+    }
+
+    #panel .err {
+        font-size: 3vmin;
+        color: #ff9a9a;
+        margin-top: 14px;
+        word-break: break-all;
+        font-family: monospace;
+    }
+</style>
+</head>
+<body>
+    <canvas id="sky"></canvas>
+
+    <div class="bar top">
+        <span id="chord"></span>
+        <span id="asana">—</span>
+        <div id="step"></div>
+    </div>
+
+    <div class="bar bottom">
+        <div id="notes"></div>
+        <div id="cue"></div>
+    </div>
+
+    <div id="panel">
+        <div id="panelMsg">Collegamento…</div>
+        <div class="small">
+            Sul computer: <b>python tools/serve.py</b>, apri
+            <b>http://localhost:8941/</b>, premi INIZIA e accendi
+            l'interruttore <b>Telefono</b>.
+        </div>
+        <div class="err" id="panelErr"></div>
+
+        <div id="pairing" class="hidden">
+            <div class="small" style="margin-top:18px">
+                Collegamento diretto: scrivi il codice che vedi sul computer.
+            </div>
+            <div class="codeRow">
+                <input id="codeInput" type="text" inputmode="text"
+                       autocapitalize="none" autocorrect="off" spellcheck="false"
+                       placeholder="luna-7413">
+                <button id="codeGo">Collega</button>
+            </div>
+        </div>
+    </div>
+
+<script src="./js/schermoView.js"></script>
+<script>
+/*
+ * Il telefono non riceve immagini: riceve posizioni, e le ridisegna con
+ * SchermoView (js/schermoView.js). Qui resta solo il trasporto e il
+ * pannello che spiega cosa non va.
+ *
+ * Niente moduli ES, niente sintassi recente: questa pagina deve aprirsi
+ * anche su un iPad vecchio.
+ */
+(function () {
+    'use strict';
+
+    var canvas = document.getElementById('sky');
+    var panel = document.getElementById('panel');
+    var panelMsg = document.getElementById('panelMsg');
+    var panelErr = document.getElementById('panelErr');
+    var els = {
+        asana: document.getElementById('asana'),
+        chord: document.getElementById('chord'),
+        step: document.getElementById('step'),
+        cue: document.getElementById('cue'),
+        notes: document.getElementById('notes')
+    };
+
+    // Una pagina bianca non dice niente. Qualunque errore finisce qui sopra.
+    window.onerror = function (msg, src, line) {
+        showPanel('Errore nella pagina', msg + '  (' + (src || '?') + ':' + (line || '?') + ')');
+        return false;
+    };
+
+    function showPanel(msg, err) {
+        panelMsg.textContent = msg;
+        panelErr.textContent = err || '';
+        panel.className = '';
+    }
+    function hidePanel() { panel.className = 'hidden'; }
+
+    if (!window.SchermoView) {
+        showPanel('Manca il file del disegno.', 'js/schermoView.js non raggiungibile');
+        return;
+    }
+    if (!window.fetch) {
+        showPanel('Browser troppo vecchio per questa pagina.', 'manca fetch()');
+        return;
+    }
+
+    var view = new window.SchermoView(canvas);
+    var snap = null;
+    var seq = -1;
+    var lastUpdate = 0;
+
+    function resize() { view.resize(window.innerWidth, window.innerHeight); }
+    window.addEventListener('resize', resize);
+    window.addEventListener('orientationchange', function () { setTimeout(resize, 200); });
+
+    /*
+     * Indirizzi relativi, non assoluti: cosi' la pagina funziona anche se
+     * il sito sta in una sottocartella e non alla radice del dominio.
+     *
+     * Long polling: si chiede lo stato "piu' nuovo di quello che ho gia'" e
+     * il server tiene la richiesta appesa finche' non c'e'. Appena arriva, si
+     * richiede subito il successivo: la catena si autoalimenta, senza
+     * raffiche di richieste a vuoto e senza WebSocket.
+     */
+    function poll() {
+        fetch('live/state?after=' + seq + '&_=' + Date.now(), { cache: 'no-store' })
+            .then(function (res) {
+                if (res.status === 204) { return null; }      // niente di nuovo
+                if (!res.ok) { throw new Error('HTTP ' + res.status); }
+                var s = res.headers.get('X-Seq');
+                if (s) { seq = parseInt(s, 10); }
+                return res.json();
+            })
+            .then(function (data) {
+                if (data) {
+                    accetta(data, 'ponte');
+                } else if (sorgente === 'ponte' && Date.now() - lastUpdate > 9000) {
+                    showPanel('Il computer non sta trasmettendo.');
+                }
+                poll();
+            })
+            .catch(function (e) {
+                showPanel('Non riesco a parlare con il computer.',
+                    (e && e.message ? e.message : String(e)) +
+                    '  —  stessa rete wi-fi? il server sta ancora girando?');
+                setTimeout(poll, 1500);
+            });
+    }
+
+    function frame() {
+        view.render(snap, Date.now() / 1000);
+        requestAnimationFrame(frame);
+    }
+
+    // schermo sempre acceso, dove si puo': a meta' saluto al sole non si ha
+    // una mano libera per risvegliarlo
+    if (navigator.wakeLock && navigator.wakeLock.request) {
+        var keep = function () {
+            navigator.wakeLock.request('screen').catch(function () {});
+        };
+        keep();
+        document.addEventListener('visibilitychange', function () {
+            if (document.visibilityState === 'visible') { keep(); }
+        });
+    }
+
+    resize();
+    frame();
+
+    /* ─── due strade per ricevere ────────────────────────────────────────
+     *
+     * 1. il PONTE: il telefono bussa al computer sulla rete locale. Veloce e
+     *    senza internet, ma vuole che il firewall del computer lo lasci
+     *    entrare.
+     *
+     * 2. il COLLEGAMENTO DIRETTO (WebRTC): i due dispositivi si chiamano
+     *    l'un l'altro verso l'esterno, e il firewall lascia passare le
+     *    risposte al traffico uscito da li'. Nessuna regola da aggiungere,
+     *    ma per presentarsi serve internet.
+     *
+     * Si prova prima il ponte, che e' la strada migliore quando c'e'. Chi
+     * arriva per primo con dei dati vince: da li' in poi il disegno non sa
+     * nemmeno da dove arrivino.
+     */
+    var sorgente = null;
+
+    function accetta(data, via) {
+        if (sorgente && sorgente !== via) { return; }   // il primo che arriva comanda
+        sorgente = via;
+        snap = data;
+        lastUpdate = Date.now();
+        hidePanel();
+        view.text(snap, els);
+    }
+
+    var tries = 0;
+    function checkBridge() {
+        fetch('live/ping', { cache: 'no-store' })
+            .then(function (r) {
+                if (!r.ok) { throw new Error('HTTP ' + r.status); }
+                if (!sorgente) { showPanel('Collegato. In attesa che il computer trasmetta…'); }
+                poll();
+            })
+            .catch(function (e) {
+                tries++;
+                var why = (e && e.message ? e.message : String(e));
+                if (sorgente) { return; }               // il diretto ce l'ha gia' fatta
+                if (tries < 2) {
+                    showPanel('Cerco il computer sulla rete… (' + tries + ')', why);
+                    setTimeout(checkBridge, 2500);
+                } else {
+                    chiediCodice('Non trovo il computer sulla rete locale.', why);
+                }
+            });
+    }
+
+    function chiediCodice(msg, why) {
+        showPanel(msg, why);
+        document.getElementById('pairing').className = '';
+    }
+
+    // ─── collegamento diretto ────────────────────────────────────────────
+    var PEERJS_URL = 'https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js';
+    var PREFIX = 'yogasynth-';
+
+    function caricaPeerJS(fatto, fallito) {
+        if (window.Peer) { fatto(); return; }
+        var tag = document.createElement('script');
+        tag.src = PEERJS_URL;
+        tag.onload = function () {
+            if (window.Peer) { fatto(); } else { fallito('PeerJS caricato ma non definito'); }
+        };
+        tag.onerror = function () { fallito('PeerJS non scaricabile (serve internet)'); };
+        document.head.appendChild(tag);
+    }
+
+    function collegaDiretto(codice) {
+        codice = String(codice || '').trim().toLowerCase();
+        if (!codice) { return; }
+        showPanel('Collegamento diretto a ' + codice + '…');
+
+        caricaPeerJS(function () {
+            var peer = new window.Peer(null, { debug: 0 });
+
+            peer.on('open', function () {
+                var conn = peer.connect(PREFIX + codice, {
+                    // dal vivo: meglio perdere un aggiornamento che
+                    // accodarne di vecchi e andare a rilento
+                    reliable: false,
+                    serialization: 'json'
+                });
+                conn.on('open', function () {
+                    showPanel('Collegato al computer. In attesa…');
+                });
+                conn.on('data', function (data) { accetta(data, 'diretto'); });
+                conn.on('close', function () {
+                    sorgente = null;
+                    chiediCodice('Il collegamento diretto è caduto.', 'riprova con il codice');
+                });
+                conn.on('error', function (err) {
+                    chiediCodice('Collegamento diretto non riuscito.',
+                        (err && err.message) || String(err));
+                });
+            });
+
+            peer.on('error', function (err) {
+                var tipo = (err && err.type) || '';
+                var spiega = tipo === 'peer-unavailable'
+                    ? "Nessun computer in ascolto su quel codice. Controlla che sia acceso l'interruttore Telefono."
+                    : ((err && err.message) || String(err));
+                chiediCodice('Collegamento diretto non riuscito.', spiega);
+            });
+        }, function (perche) {
+            chiediCodice('Collegamento diretto non disponibile.', perche);
+        });
+    }
+
+    document.getElementById('codeGo').addEventListener('click', function () {
+        collegaDiretto(document.getElementById('codeInput').value);
+    });
+    document.getElementById('codeInput').addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { collegaDiretto(this.value); }
+    });
+
+    // Con il codice nell'indirizzo (…/schermo.html#luna-7413) si parte
+    // subito col diretto, in parallelo al ponte: su un sito pubblicato il
+    // ponte non c'e' e aspettarlo sarebbe tempo buttato.
+    var daIndirizzo = (location.hash || '').replace('#', '').trim();
+    if (daIndirizzo) {
+        document.getElementById('codeInput').value = daIndirizzo;
+        collegaDiretto(daIndirizzo);
+    }
+    checkBridge();
+}());
+</script>
+</body>
+</html>

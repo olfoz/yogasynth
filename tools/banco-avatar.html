@@ -1,0 +1,75 @@
+<!DOCTYPE html><html lang="it"><head><meta charset="utf-8"><title>banco di prova — avatar</title></head><body><pre id="out">running</pre>
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.157.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.157.0/examples/jsm/"}}
+</script>
+<script type="module">
+const log=[];const out=()=>document.getElementById('out').textContent=log.join('\n');
+window.onerror=e=>{log.push('ERROR '+e);out();};
+try{
+const THREE=await import('three');
+const {GuideAvatar}=await import('/js/render/avatar.js?v='+Date.now());
+const R=await import('/js/pose/rays.js');
+const data=await(await fetch('/data/asanas.json?v='+Date.now())).json();
+const scene=new THREE.Scene();
+const av=new GuideAvatar(scene);
+const t0=performance.now();
+await av.load('/avatars/nathan.fbx');
+log.push('caricato in '+Math.round(performance.now()-t0)+'ms');
+log.push('skinnedMesh='+!!av.skinnedMesh+' ossa='+av.skinnedMesh.skeleton.bones.length);
+log.push('catene IK: '+Object.keys(av.ikTargets).filter(k=>av.ikTargets[k]).join(', '));
+log.push('forward='+av.forward.toArray().map(v=>v.toFixed(3))+'  lateral='+av.lateral.toArray().map(v=>v.toFixed(3)));
+log.push('restTorso='+av.restTorso.toFixed(2)+' restHead='+av.restHead.toFixed(2));
+log.push('restLateral='+JSON.stringify(Object.fromEntries(Object.entries(av.restLateral).map(([k,v])=>[k,+v.toFixed(2)]))));
+const names=av.skinnedMesh.skeleton.bones.map(b=>b.name);
+log.push('ossa chiave: '+names.filter(n=>/hip|pelvis|head|foot_l|ball_l|toe|upperarm_l|hand_l/i.test(n)).join(', '));
+// proporzioni fra le ossa che corrispondono ai landmark MediaPipe
+{
+  const B=av.skinnedMesh.skeleton.bones;
+  const bn=n=>B.find(b=>b.name.toLowerCase().endsWith(n));
+  const wp=b=>b.getWorldPosition(new THREE.Vector3());
+  const hipJ=av._hipJointWorld(new THREE.Vector3());
+  const head=wp(bn('_head')), sh=wp(bn('upperarm_l')), el=wp(bn('lowerarm_l')),
+        ha=wp(bn('hand_l')), kn=wp(bn('lowerleg_l')), ft=wp(bn('foot_l'));
+  const seg={torso:hipJ.distanceTo(sh), head:sh.distanceTo(head),
+             upperArm:sh.distanceTo(el), foreArm:el.distanceTo(ha),
+             thigh:hipJ.distanceTo(kn), shin:kn.distanceTo(ft)};
+  const H=seg.thigh+seg.shin+seg.torso+seg.head;   // caviglia->naso disteso
+  log.push('PROPORZIONI (catena caviglia->naso = '+H.toFixed(2)+')');
+  for(const k in seg) log.push("    '"+k+"': "+(seg[k]/H).toFixed(4)+',');
+  log.push('   restTorso='+av.restTorso.toFixed(2)+' restHead='+av.restHead.toFixed(2));
+  log.push('');
+}
+const EFF={leftHand:'lWrist',rightHand:'rWrist',leftFoot:'lAnkle',rightFoot:'rAnkle',head:'nose'};
+for(const a of data.asanas){
+  const t=R.asanaPoints(a);
+  av.fitTo(t,a.view,a.facing);
+  av.poseTo(t,a.view);
+  scene.updateMatrixWorld(true);
+  const errs=[];
+  for(const k in EFF){
+    const sp=av.ikTargets[k]; if(!sp) continue;
+    const w=sp.userData.effectorBone.getWorldPosition(new THREE.Vector3());
+    const jn=EFF[k]; const other=jn[0]==='l'?'r'+jn.slice(1):jn[0]==='r'?'l'+jn.slice(1):null;
+    const A=t[jn],B=other?t[other]:null;
+    const p=B?{x:(A.x+B.x)/2,y:(A.y+B.y)/2}:A;
+    const d=Math.hypot(w.x-p.x,w.y-(1-p.y));
+    errs.push(k+'='+d.toFixed(3));
+  }
+  const B=av.skinnedMesh.skeleton.bones;
+  const bn=n=>B.find(b=>b.name.toLowerCase().endsWith(n));
+  const wp=b=>b.getWorldPosition(new THREE.Vector3());
+  const sh=wp(bn('upperarm_l')),el=wp(bn('lowerarm_l')),ha=wp(bn('hand_l'));
+  const armLen=sh.distanceTo(el)+el.distanceTo(ha);
+  const dataSh=[(t.lShoulder.x+t.rShoulder.x)/2,(t.lShoulder.y+t.rShoulder.y)/2];
+  const dataWr=[(t.lWrist.x+t.rWrist.x)/2,(t.lWrist.y+t.rWrist.y)/2];
+  const need=Math.hypot(dataWr[0]-dataSh[0],dataWr[1]-dataSh[1]);
+  const dataEl=[(t.lElbow.x+t.rElbow.x)/2,(t.lElbow.y+t.rElbow.y)/2];
+  log.push('   gomito avatar=('+el.x.toFixed(3)+','+el.y.toFixed(3)+') dati=('+dataEl[0].toFixed(3)+','+(1-dataEl[1]).toFixed(3)+') scarto='+Math.hypot(el.x-dataEl[0],el.y-(1-dataEl[1])).toFixed(3));
+  log.push('   braccio avatar='+armLen.toFixed(3)+' servono='+need.toFixed(3)
+    +'  spalla avatar=('+sh.x.toFixed(3)+','+sh.y.toFixed(3)+') dati=('+dataSh[0].toFixed(3)+','+(1-dataSh[1]).toFixed(3)+')');
+  const hip=av.hipBone.getWorldPosition(new THREE.Vector3());
+  log.push(a.id.padEnd(24)+' scala='+av.rig.scale.x.toExponential(2)+' rotY='+(av.rig.rotation.y*180/Math.PI).toFixed(0)+'deg hipErr='+Math.hypot(hip.x-t.hipMid.x,hip.y-(1-t.hipMid.y)).toFixed(3)+'  '+errs.join(' '));
+}
+}catch(e){log.push('EXC '+(e&&e.stack||e));}
+out();
+</script></body></html>

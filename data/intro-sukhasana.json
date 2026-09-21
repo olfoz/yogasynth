@@ -1,0 +1,75 @@
+{
+  "_doc": {
+    "cosa": "Minianimazione iniziale: Sukhasana (seduto a gambe incrociate) che porta le mani a giunte davanti al petto, Anjali Mudra.",
+    "spazio": "Ogni voce e' la DIREZIONE di un segmento nel sistema del corpo: x verso il fianco sinistro, y in alto, z in avanti (verso la telecamera). Le lunghezze non contano, gli ossi restano lunghi quanto sono: si scrive un fotogramma chiave senza dover far tornare le proporzioni.",
+    "segmenti": "spine = anca->spalle, head = spalle->naso, upperArm* = spalla->gomito, foreArm* = gomito->polso, thigh* = anca->ginocchio, shin* = ginocchio->caviglia. L e R sono il lato sinistro e destro del corpo.",
+    "base": "Le direzioni scritte in 'base' valgono per tutti i fotogrammi; ogni fotogramma sovrascrive solo quello che cambia. Le gambe restano ferme per tutta l'animazione.",
+    "ease": "L'interpolazione fra due fotogrammi e' addolcita in entrata e in uscita, cosi' i gesti partono e si fermano piano."
+  },
+
+  "name": "Sukhasana · Anjali Mudra",
+  "duration": 8.0,
+
+  "base": {
+    "spine":  [0.00,  0.998, 0.06],
+    "head":   [0.00,  0.96,  0.28],
+
+    "thighL": [ 0.62, -0.12, 0.77],
+    "shinL":  [-0.84, -0.10, 0.53],
+    "thighR": [-0.62, -0.12, 0.77],
+    "shinR":  [ 0.88, -0.07, 0.47]
+  },
+
+  "keys": [
+    {
+      "t": 0.0,
+      "_nota": "seduto, mani appoggiate sulle ginocchia",
+      "upperArmL": [ 0.24, -0.93, 0.28],
+      "foreArmL":  [ 0.44, -0.58, 0.69],
+      "upperArmR": [-0.24, -0.93, 0.28],
+      "foreArmR":  [-0.44, -0.58, 0.69]
+    },
+    {
+      "t": 1.0,
+      "_nota": "immobile: si lascia respirare l'inizio",
+      "upperArmL": [ 0.24, -0.93, 0.28],
+      "foreArmL":  [ 0.44, -0.58, 0.69],
+      "upperArmR": [-0.24, -0.93, 0.28],
+      "foreArmR":  [-0.44, -0.58, 0.69]
+    },
+    {
+      "t": 2.4,
+      "_nota": "le mani si staccano dalle ginocchia e si portano avanti",
+      "upperArmL": [ 0.20, -0.94, 0.28],
+      "foreArmL":  [ 0.06, -0.20, 0.98],
+      "upperArmR": [-0.20, -0.94, 0.28],
+      "foreArmR":  [-0.06, -0.20, 0.98]
+    },
+    {
+      "t": 3.8,
+      "_nota": "palmi uniti davanti allo sterno: Anjali Mudra. I gomiti stanno bassi e vicini alle costole, non aperti: e' quello che porta le mani al petto invece che al viso.",
+      "upperArmL": [ 0.13, -0.95, 0.30],
+      "foreArmL":  [-0.88,  0.34, 0.33],
+      "upperArmR": [-0.13, -0.95, 0.30],
+      "foreArmR":  [ 0.88,  0.34, 0.33]
+    },
+    {
+      "t": 5.4,
+      "_nota": "un respiro: la colonna si allunga, il capo si solleva appena",
+      "spine": [0.00, 1.00, 0.03],
+      "head":  [0.00, 0.99, 0.16],
+      "upperArmL": [ 0.12, -0.95, 0.29],
+      "foreArmL":  [-0.87,  0.37, 0.32],
+      "upperArmR": [-0.12, -0.95, 0.29],
+      "foreArmR":  [ 0.87,  0.37, 0.32]
+    },
+    {
+      "t": 8.0,
+      "_nota": "si torna a fermarsi, mani ancora giunte",
+      "upperArmL": [ 0.13, -0.95, 0.30],
+      "foreArmL":  [-0.88,  0.34, 0.33],
+      "upperArmR": [-0.13, -0.95, 0.30],
+      "foreArmR":  [ 0.88,  0.34, 0.33]
+    }
+  ]
+}

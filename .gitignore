@@ -1,0 +1,13 @@
+# Le due app di partenza: restano in locale come materiale di riferimento.
+# Sono un giga di video e build, e l'app unificata non le usa a runtime
+# (i moduli condivisi sono copiati in js/vendor/).
+/dronasana/
+/yoga/
+
+# sfondo rimasto dalla cartella yoga: l'app usa la webcam, non serve
+
+# scarti del sistema
+Thumbs.db
+.DS_Store
+desktop.ini
+/ambients/

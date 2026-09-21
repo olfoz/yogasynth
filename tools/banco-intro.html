@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<title>banco di prova — minianimazione iniziale</title>
+<style>
+  html, body { margin: 0; background: #0b0d16; }
+  canvas { display: block; }
+  #log { position: fixed; bottom: 0; left: 0; color: #9aa; font: 11px monospace; padding: 4px 8px; }
+</style>
+</head>
+<body>
+<div id="log">…</div>
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.157.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.157.0/examples/jsm/"}}
+</script>
+<script type="module">
+// Rende l'animazione iniziale in una striscia di istanti, per guardarla.
+// Lo stesso avatar viene riposato e ridisegnato in ogni riquadro, cosi' si
+// paga un solo caricamento dell'FBX.
+//
+//   chrome --headless=new --enable-unsafe-swiftshader --virtual-time-budget=60000
+//          --window-size=1560,420 --screenshot=intro.png
+//          http://127.0.0.1:8941/tools/banco-intro.html?view=front
+//
+// ?view=side ruota di 90 gradi, per controllare la profondita' del gesto.
+
+const THREE = await import('three');
+const { GuideAvatar } = await import('/js/render/avatar.js?v=' + Date.now());
+const { PoseClip } = await import('/js/poseClip.js?v=' + Date.now());
+
+const COLS = 6;
+const CELL_W = 260, CELL_H = 420;
+const params = new URLSearchParams(location.search);
+const side = params.get('view') === 'side';
+
+// preserveDrawingBuffer: senza, lo screenshot arriva a buffer gia' svuotato
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(1);
+renderer.setSize(CELL_W * COLS, CELL_H);
+renderer.setScissorTest(true);
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+const key = new THREE.DirectionalLight(0xffffff, 1.0); key.position.set(1, 2, 3); scene.add(key);
+const rim = new THREE.DirectionalLight(0x88aaff, 0.6); rim.position.set(-2, 1, -2); scene.add(rim);
+
+// stesso spazio dell'app: x in 0..aspect, y in 0..1
+const aspect = CELL_W / CELL_H;
+const camera = new THREE.OrthographicCamera(0, aspect, 1, 0, -20, 20);
+camera.position.set(0, 0, 10);
+
+const avatar = new GuideAvatar(scene);
+await avatar.load('/avatars/nathan.fbx');
+avatar.visible = true;
+avatar.setOpacity(1);
+
+const clip = await PoseClip.load('/data/intro-sukhasana.json?v=' + Date.now());
+
+// inquadratura fissata una volta, come fa Intro
+avatar.placeCentered({ cx: aspect / 2, cy: 0.5, w: aspect, h: 1 });
+avatar.poseFromDirections(clip.sample(clip.duration * 0.6));
+avatar.frameTo({ cx: aspect / 2, cy: 0.48, w: aspect, h: 1 }, 0.7);
+if (side) {
+    avatar.rig.rotation.y += Math.PI / 2;
+    avatar.rig.updateMatrixWorld(true);
+}
+const home = { pos: avatar.rig.position.clone(), scale: avatar.rig.scale.clone() };
+
+// riferimento: un rettangolo che copre il riquadro. Se non si vede, il
+// problema e' WebGL, non l'inquadratura dell'avatar.
+const probe = new THREE.Mesh(
+    new THREE.PlaneGeometry(aspect * 0.9, 0.9),
+    new THREE.MeshBasicMaterial({ color: 0x33234a })
+);
+probe.position.set(aspect / 2, 0.5, -8);
+scene.add(probe);
+
+const times = [];
+for (let i = 0; i < COLS; i++) times.push((clip.duration * i) / (COLS - 1));
+
+renderer.setClearColor(0x0b0d16, 1);
+
+function drawStrip() {
+    renderer.clear();
+    for (let i = 0; i < COLS; i++) {
+        avatar.rig.position.copy(home.pos);
+        avatar.rig.scale.copy(home.scale);
+        avatar.rig.updateMatrixWorld(true);
+        avatar.poseFromDirections(clip.sample(times[i]));
+
+        renderer.setViewport(i * CELL_W, 0, CELL_W, CELL_H);
+        renderer.setScissor(i * CELL_W, 0, CELL_W, CELL_H);
+        renderer.render(scene, camera);
+    }
+    requestAnimationFrame(drawStrip);
+}
+drawStrip();
+
+const gl = renderer.getContext();
+const dbg = gl.getExtension('WEBGL_debug_renderer_info');
+const bones = avatar.frameBones;
+let minY = Infinity, maxY = -Infinity, minX = Infinity, maxX = -Infinity;
+const q = new THREE.Vector3();
+for (const b of bones) { b.getWorldPosition(q);
+  minY = Math.min(minY, q.y); maxY = Math.max(maxY, q.y);
+  minX = Math.min(minX, q.x); maxX = Math.max(maxX, q.x); }
+
+document.getElementById('log').textContent =
+    clip.name + '  vista=' + (side ? 'fianco' : 'fronte')
+    + '  | gl=' + (gl ? 'si' : 'NO')
+    + ' ' + (dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : '?')
+    + '  | frustum x 0..' + aspect.toFixed(2) + ' y 0..1'
+    + '  | ossa x ' + minX.toFixed(2) + '..' + maxX.toFixed(2)
+    + ' y ' + minY.toFixed(2) + '..' + maxY.toFixed(2)
+    + '  | scala ' + avatar.rig.scale.x.toExponential(2)
+    + '  | istanti ' + times.map(t => t.toFixed(1)).join(' ');
+</script>
+</body>
+</html>

@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<title>banco di prova — app intera</title>
+<style>
+  body { font: 13px/1.5 monospace; margin: 0; background: #111; color: #ddd; }
+  pre { padding: 12px; margin: 0; white-space: pre-wrap; }
+  iframe { width: 900px; height: 560px; border: 1px solid #333; }
+</style>
+</head>
+<body>
+<pre id="out">avvio…</pre>
+<iframe id="app" src="/index.html" allow="camera; microphone; autoplay"></iframe>
+<script>
+// Carica l'app vera in un iframe, preme INIZIA e racconta cosa succede.
+// Va aperto da Chrome con la webcam finta, altrimenti getUserMedia fallisce:
+//
+//   chrome --headless=new --use-fake-device-for-media-stream
+//          --use-fake-ui-for-media-stream --autoplay-policy=no-user-gesture-required
+//          --virtual-time-budget=120000 --dump-dom
+//          http://127.0.0.1:8941/tools/banco-app.html
+const log = [];
+const out = () => document.getElementById('out').textContent = log.join('\n');
+const say = m => { log.push(m); out(); };
+
+const frame = document.getElementById('app');
+const wait = ms => new Promise(r => setTimeout(r, ms));
+
+frame.addEventListener('load', async () => {
+    const w = frame.contentWindow;
+    const d = frame.contentDocument;
+    const errors = [];
+    w.addEventListener('error', e => errors.push('ERRORE ' + e.message + ' @' + e.filename + ':' + e.lineno));
+    w.addEventListener('unhandledrejection', e => errors.push('PROMISE ' + (e.reason && e.reason.message || e.reason)));
+
+    await wait(1500);
+    const txt = id => { const el = d.getElementById(id); return el ? el.textContent.trim() : '(manca ' + id + ')'; };
+
+    say('--- prima di INIZIA ---');
+    say('accordi in anteprima: ' + txt('chordPreview'));
+    say('sequenze nel menu:    ' + [...d.getElementById('modeSelect').options].map(o => o.value).join(', '));
+    say('barra di stato:       ' + txt('statusBar'));
+
+    d.getElementById('startButton').click();
+    say('');
+    say('--- INIZIA premuto, attendo ---');
+
+    for (const s of [3000, 5000, 8000, 8000]) {
+        await wait(s);
+        const canvas = d.querySelector('#stage canvas:not(#hudCanvas)');
+        say('t+' + s + 'ms  stato: ' + txt('statusBar'));
+        say('        asana: ' + txt('asanaBadge') + '   accordo: ' + txt('chordStaff').replace(/\s+/g, ' '));
+        say('        caricamento: ' + txt('progressText')
+            + '   canvas WebGL: ' + (canvas ? canvas.width + 'x' + canvas.height : 'nessuno'));
+    }
+
+    say('');
+    say(errors.length ? errors.join('\n') : 'nessun errore JavaScript');
+    say('FINE');
+});
+</script>
+</body>
+</html>

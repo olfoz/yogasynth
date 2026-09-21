@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>banco di prova — rete</title>
+<style>
+    body { font: 14px/1.7 ui-monospace, Menlo, monospace; background: #0b0d16; color: #ddd; margin: 0; padding: 18px; }
+    h1 { font-size: 16px; color: #cbb6ff; margin: 0 0 4px; }
+    p.sub { color: #8b93ad; font-size: 12px; margin: 0 0 16px; }
+    pre { white-space: pre-wrap; }
+    .ok { color: #7fe08a; }
+    .no { color: #ff9a9a; }
+    .wait { color: #ffd479; }
+</style>
+</head>
+<body>
+<h1>Il collegamento diretto puo' funzionare qui?</h1>
+<p class="sub">
+    Aprila nel browser vero, non headless: Chrome headless ha WebRTC
+    disattivato e darebbe sempre esito negativo. Aprila anche sul telefono.
+</p>
+<pre id="o">provo…</pre>
+<script>
+/*
+ * Tre prove, dalla piu' elementare alla piu' esigente:
+ *   1. WebRTC esiste e raccoglie candidati locali?  (non serve rete)
+ *   2. STUN raggiungibile?                          (serve UDP verso internet)
+ *   3. WebSocket verso il broker?                   (serve per le presentazioni)
+ *
+ * Se 1 e 2 vanno ma 3 no, il collegamento diretto potrebbe funzionare con un
+ * servizio di presentazioni diverso. Se 1 non va, qui non c'e' niente da fare.
+ */
+var L = [], o = document.getElementById('o');
+function say(m) { L.push(m); o.innerHTML = L.join('\n'); }
+function ok(m) { say('<span class="ok">SI </span> ' + m); }
+function no(m) { say('<span class="no">NO </span> ' + m); }
+
+// ─── 1 e 2: WebRTC e STUN ───────────────────────────────────────────────
+var tipi = {};
+try {
+    var pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+    pc.createDataChannel('prova');
+    pc.onicecandidate = function (e) {
+        if (!e.candidate) { return; }
+        var t = (e.candidate.candidate.match(/ typ (\w+)/) || [])[1] || '?';
+        tipi[t] = (tipi[t] || 0) + 1;
+    };
+    pc.createOffer().then(function (off) { return pc.setLocalDescription(off); })
+        .catch(function (e) { no('WebRTC: ' + e.message); });
+
+    setTimeout(function () {
+        tipi.host ? ok('WebRTC funziona (candidati locali: ' + tipi.host + ')')
+                  : no('WebRTC non raccoglie nemmeno candidati locali: qui e\' disattivato');
+        tipi.srflx ? ok('STUN raggiungibile (indirizzo pubblico trovato)')
+                   : no('STUN non raggiungibile: UDP verso internet bloccato');
+        try { pc.close(); } catch (e) {}
+    }, 6000);
+} catch (err) {
+    no('WebRTC non disponibile: ' + err.message);
+}
+
+// ─── 3: WebSocket verso il broker ───────────────────────────────────────
+say('<span class="wait">...</span> provo il WebSocket verso il broker (8s)');
+var t0 = Date.now(), risolto = false;
+function esito(f, m) { if (risolto) { return; } risolto = true; f(m + ' (' + (Date.now() - t0) + 'ms)'); }
+try {
+    var ws = new WebSocket('wss://0.peerjs.com/peerjs?key=peerjs&id=prova'
+        + Math.floor(Math.random() * 1e6) + '&token=t1&version=1.5.4');
+    ws.onopen = function () { esito(ok, 'WebSocket verso il broker aperto'); try { ws.close(); } catch (e) {} };
+    ws.onerror = function () { esito(no, 'WebSocket rifiutato'); };
+    ws.onclose = function (e) { esito(no, 'WebSocket chiuso subito, codice ' + e.code); };
+    setTimeout(function () { esito(no, 'WebSocket appeso senza risposta: qualcosa lo blocca'); }, 8000);
+} catch (err) {
+    esito(no, 'WebSocket non disponibile: ' + err.message);
+}
+</script>
+</body>
+</html>

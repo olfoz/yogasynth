@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>yogasynth</title>
+    <link rel="stylesheet" href="./css/styles.css">
+</head>
+<body>
+    <div id="canvas-container">
+        <!-- Il palco: il canvas WebGL (aggiunto da Stage) con la webcam come
+             sfondo della scena, e sopra il canvas 2D dell'HUD. Il <video> e'
+             solo la sorgente della texture, non si vede mai. -->
+        <div id="stage">
+            <canvas id="hudCanvas"></canvas>
+        </div>
+    </div>
+
+    <!-- Sorgente della texture video. Sta fuori schermo invece che
+         display:none: un video non renderizzato puo' non aggiornare la
+         VideoTexture. -->
+    <video id="vid" class="video-source" playsinline autoplay muted></video>
+
+    <div class="top-left">
+        <div class="app-title-card">
+            <span class="logo">&#10022;</span> yogasynth
+            <span class="sub">il corpo che suona</span>
+        </div>
+        <div class="asana-badge" id="asanaBadge">&mdash;</div>
+    </div>
+
+    <!-- Pentagramma con le note dell'accordo, una per retta -->
+    <div class="chord-staff" id="chordStaff"></div>
+
+    <div class="bottom-toggle-panel">
+        <div class="toggle-container">
+            <span class="toggle-label">Avatar</span>
+            <div class="toggle-switch active" id="avatarToggle">
+                <input type="checkbox" id="avatarCheckbox" checked>
+                <span class="toggle-slider"></span>
+            </div>
+        </div>
+        <div class="toggle-container">
+            <span class="toggle-label">Corpo</span>
+            <div class="toggle-switch active" id="bodyToggle">
+                <input type="checkbox" id="bodyCheckbox" checked>
+                <span class="toggle-slider"></span>
+            </div>
+        </div>
+        <div class="toggle-container">
+            <span class="toggle-label" title="Stringe l'inquadratura sul tuo corpo: da lontano ti vedi comunque grande">Zoom auto</span>
+            <div class="toggle-switch active" id="zoomToggle">
+                <input type="checkbox" id="zoomCheckbox" checked>
+                <span class="toggle-slider"></span>
+            </div>
+        </div>
+        <div class="toggle-container">
+            <span class="toggle-label" title="Manda quello che vedi a un telefono, da mettere davanti a te">Telefono</span>
+            <div class="toggle-switch" id="castToggle">
+                <input type="checkbox" id="castCheckbox">
+                <span class="toggle-slider"></span>
+            </div>
+        </div>
+        <div class="toggle-container">
+            <span class="toggle-label">Raggi</span>
+            <div class="toggle-switch active" id="raysToggle">
+                <input type="checkbox" id="raysCheckbox" checked>
+                <span class="toggle-slider"></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="status-bar" id="statusBar">In attesa&hellip;</div>
+
+    <!-- Indirizzo da aprire sul telefono, mostrato quando si accende "Telefono" -->
+    <div class="cast-card hidden" id="castCard">
+        <div class="cast-title">&#128241; Apri sul telefono</div>
+        <code id="castUrl">&hellip;</code>
+        <div class="cast-note" id="castNote"></div>
+
+        <div class="cast-sep">oppure, se la rete non collabora</div>
+        <div class="cast-title">&#128279; Collegamento diretto</div>
+        <div class="cast-code" id="castCode">&hellip;</div>
+        <div class="cast-note" id="castPeer">&nbsp;</div>
+    </div>
+
+    <div class="loading-container" id="loadingContainer">
+        <div class="loading-title">yogasynth</div>
+        <div class="progress-bar-container">
+            <div class="progress-bar" id="progressBar"></div>
+        </div>
+        <div class="progress-text" id="progressText">Avvio&hellip;</div>
+    </div>
+
+    <div class="overlay" id="overlay"></div>
+    <div class="legend-popup" id="startPopup">
+        <div class="popup-header">
+            <h2 class="popup-title">&#10022; yogasynth</h2>
+        </div>
+        <div class="start-desc">
+            Ogni asana proietta delle <b>rette</b>, che vedi come <b>raggi cosmici</b>:
+            adagia il corpo su di loro.<br><br>
+            Ogni raggio &egrave; una nota dell'accordo, sempre nello stesso ordine:<br>
+            &#9679; <b>spina dorsale</b> &rarr; fondamentale, nel basso<br>
+            &#9679; <b>arti superiori</b> &rarr; seconda nota<br>
+            &#9679; <b>arti inferiori</b> &rarr; terza nota<br>
+            &#9679; <b>rette in pi&ugrave;</b> (braccia piegate) &rarr; note aggiunte<br><br>
+            Il suono &egrave; tanto pi&ugrave; <b>armonico</b> quanto pi&ugrave; la posizione &egrave; corretta,
+            e ogni secondo di tenuta aggiunge <b>un armonico</b>.
+            A ogni cambio di asana il basso sale di una <b>quinta</b>:<br>
+            <span class="chord-preview" id="chordPreview"></span><br><br>
+            Nel Saluto al Sole il corpo sta <b>di profilo</b> rispetto alla telecamera,
+            come nelle tavole classiche: mettiti di lato, corpo intero inquadrato.
+            <div class="privacy">
+                &#128274; Serve la webcam, ma <b>le immagini non lasciano questo
+                dispositivo</b>: il riconoscimento della posa avviene qui, nel
+                browser, e non viene inviato o registrato niente.
+            </div>
+        </div>
+        <div class="cam-row">
+            <label for="modeSelect">&#129517; Sequenza</label>
+            <select id="modeSelect"></select>
+        </div>
+        <div class="cam-row">
+            <label for="cameraSelect">&#128247; Webcam</label>
+            <select id="cameraSelect"><option value="">Predefinita</option></select>
+            <button id="camRefresh" title="Rileva le webcam disponibili">&#128260;</button>
+        </div>
+        <div class="start-btn-row">
+            <button class="load-button" id="startButton">&#9654; INIZIA</button>
+        </div>
+    </div>
+
+    <!-- MediaPipe Pose: espone il globale `Pose`, usato da js/pose/tracker.js -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.157.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.157.0/examples/jsm/"
+        }
+    }
+    </script>
+    <script type="module" src="./js/main.js"></script>
+</body>
+</html>
