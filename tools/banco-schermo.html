@@ -58,41 +58,62 @@
  */
 var SNAP = {
     aspect: 1.3333,
-    asana: 'Uttanasana',
-    step: 'Passo 3/11 · Uttanasana',
-    cue: 'Gambe a piombo, busto che cade lungo il loro raggio. Le braccia sono piegate: due raggi distinti, quindi una quarta nota.',
-    chord: 'Dsus2',
-    progress: 0.62,
+    asana: 'Urdhva Hastasana',
+    step: 'Passo 2/11 · Urdhva Hastasana',
+    cue: "Le braccia prolungano la spina dorsale verso l'alto: un unico raggio dai talloni alle dita.",
+    chord: 'G',
+    progress: 0.24,
     done: false,
+    // Corpo ancora in Tadasana, braccia lungo i fianchi, mentre l'asana
+    // chiesto e' Urdhva Hastasana: e' il caso che conta, quello in cui la
+    // figura guida serve davvero. Con un corpo gia' nella posa giusta le
+    // due sagome coinciderebbero e il banco non proverebbe niente. Le
+    // coordinate vengono da data/asanas.json, non sono inventate: se le
+    // proporzioni fossero sbagliate la figura guida sembrerebbe scalata
+    // male e non si capirebbe di chi e' la colpa.
     body: {
-        nose: [0.556, 0.802],
-        lShoulder: [0.536, 0.690], rShoulder: [0.556, 0.690],
-        lElbow: [0.586, 0.772], rElbow: [0.606, 0.772],
-        lWrist: [0.540, 0.888], rWrist: [0.560, 0.888],
-        lHip: [0.500, 0.520], rHip: [0.520, 0.520],
-        lKnee: [0.502, 0.710], rKnee: [0.522, 0.710],
-        lAnkle: [0.500, 0.898], rAnkle: [0.520, 0.898],
-        shoulderMid: [0.546, 0.690], hipMid: [0.510, 0.520]
+        nose: [0.515, 0.260],
+        lShoulder: [0.503, 0.326], rShoulder: [0.517, 0.326],
+        lElbow: [0.501, 0.406], rElbow: [0.514, 0.406],
+        lWrist: [0.501, 0.483], rWrist: [0.514, 0.483],
+        lHip: [0.503, 0.500], rHip: [0.517, 0.500],
+        lKnee: [0.503, 0.633], rKnee: [0.517, 0.633],
+        lAnkle: [0.503, 0.759], rAnkle: [0.517, 0.759],
+        shoulderMid: [0.510, 0.326], hipMid: [0.510, 0.500]
+    },
+    // la posa da raggiungere, come la manda js/schermo.js: relativa al
+    // bacino e misurata in lunghezze di busto
+    targetKey: 'urdhva-hastasana',
+    target: {
+        nose: [0.0049, -1.3766],
+        lShoulder: [-0.0725, -0.9994], rShoulder: [0.003, -0.9994],
+        lElbow: [-0.0245, -1.457], rElbow: [0.051, -1.457],
+        lWrist: [-0.0091, -1.9021], rWrist: [0.0665, -1.9021],
+        lHip: [-0.0378, 0.0], rHip: [0.0378, 0.0],
+        lKnee: [-0.0378, 0.7661], rKnee: [0.0378, 0.7661],
+        lAnkle: [-0.0378, 1.4898], rAnkle: [0.0378, 1.4898],
+        shoulderMid: [-0.0347, -0.9994], hipMid: [0.0, 0.0]
     },
     rays: [
-        { id: 'spine', label: 'Spina dorsale', color: '#7C4DFF', note: 'D2',
+        { id: 'spine', label: 'Spina dorsale', color: '#7C4DFF', note: 'G2',
           segs: [['hipMid', 'shoulderMid'], ['shoulderMid', 'nose']],
-          score: 0.93, active: true, harmonics: 5, maxHarmonics: 8,
-          fit: { cx: 0.537, cy: 0.670, dx: 0.155, dy: 0.988 } },
-        { id: 'upperArms', label: 'Braccia', color: '#00E5FF', note: 'E3',
-          segs: [['lElbow', 'lShoulder'], ['lShoulder', 'rShoulder'], ['rShoulder', 'rElbow']],
-          score: 0.78, active: true, harmonics: 2, maxHarmonics: 8,
-          fit: { cx: 0.571, cy: 0.731, dx: 0.530, dy: 0.848 } },
-        { id: 'legs', label: 'Arti inferiori', color: '#FFB300', note: 'A3',
+          score: 0.88, active: true, harmonics: 3, maxHarmonics: 8,
+          fit: { cx: 0.5083, cy: 0.3622, dx: 0.0043, dy: 1.0 } },
+        { id: 'arms', label: 'Arti superiori', color: '#00E5FF', note: 'B3',
+          segs: [['lWrist', 'lElbow'], ['lElbow', 'lShoulder'], ['lShoulder', 'rShoulder'], ['rShoulder', 'rElbow'], ['rElbow', 'rWrist']],
+          score: 0.21, active: false, harmonics: 0, maxHarmonics: 8,
+          fit: { cx: 0.5104, cy: 0.2472, dx: 0.071, dy: -0.9975 } },
+        { id: 'legs', label: 'Arti inferiori', color: '#FFB300', note: 'D4',
           segs: [['lAnkle', 'lKnee'], ['lKnee', 'lHip'], ['lHip', 'rHip'], ['rHip', 'rKnee'], ['rKnee', 'rAnkle']],
-          score: 0.41, active: false, harmonics: 0, maxHarmonics: 8,
-          fit: { cx: 0.511, cy: 0.709, dx: 0.021, dy: 0.999 } },
-        { id: 'foreArms', label: 'Avambracci', color: '#69F0AE', note: 'D4',
-          segs: [['lWrist', 'lElbow'], ['lElbow', 'rElbow'], ['rElbow', 'rWrist']],
-          score: 0.55, active: false, harmonics: 0, maxHarmonics: 8,
-          fit: { cx: 0.573, cy: 0.830, dx: -0.686, dy: 0.728 } }
+          score: 0.95, active: true, harmonics: 5, maxHarmonics: 8,
+          fit: { cx: 0.51, cy: 0.6308, dx: 0.0, dy: 1.0 } }
     ]
 };
+
+// ?nessuno=1 toglie il corpo: e' il caso di chi apre il telefono prima di
+// mettersi davanti alla webcam. La figura guida deve comparire lo stesso,
+// centrata, altrimenti non si saprebbe che posa assumere per farsi vedere.
+if (/(^|[?&])nessuno=1/.test(location.search)) { SNAP.body = null; }
 
 var view = new window.SchermoView(document.getElementById('sky'));
 var els = {

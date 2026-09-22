@@ -320,6 +320,35 @@ confondevano con i raggi stessi; bianco sopra colorato si legge a colpo
 d'occhio: il corpo e' dentro il fascio, oppure no. L'inquadratura si stringe
 sul corpo come fa il computer, con lo stesso tetto di ingrandimento.
 
+### La posa da raggiungere
+
+Sul telefono si vede anche **la figura da raggiungere**, azzurra, dietro al
+proprio corpo bianco. Le rette da sole dicono *dove* stendersi ma non che
+posa assumere, e sul telefono non c'e' l'avatar guida del computer: senza,
+chi guarda lo schermo appoggiato per terra deve indovinare. E' disegnata
+piu' spessa del corpo apposta — quando la posa e' giusta il bianco le entra
+dentro e resta solo un alone azzurro attorno.
+
+Non si mandano le coordinate gia' messe in scala, che cambierebbero a ogni
+fotogramma insieme a chi si muove. Si manda la posa **normalizzata**:
+origine sul bacino, unita' di misura la lunghezza del busto. Cosi' per tutta
+la durata di un asana e' ferma, e viaggia solo quando cambia (piu' una
+ripetizione ogni otto messaggi, per chi si collega a meta' asana): in media
+cinquanta byte per aggiornamento, il 4% in piu'. E' il telefono a rimetterla
+in scala sul corpo che sta gia' ricevendo, quindi la guida segue chi pratica
+a ogni fotogramma senza costare niente.
+
+Quella rimessa in scala e' la stessa aritmetica che fa il computer
+(`anchorTarget`, in [`js/pose/rays.js`](js/pose/rays.js) — sta li' e non in
+`main.js` proprio perche' ora la usano in due). Due copie che si allontanano
+darebbero una guida leggermente fuori posto sul solo telefono, e non si
+noterebbe guardando il computer: `tools/banco-logica.html` confronta le due
+strade a ogni giro e vuole meno di 2·10⁻⁴ di scarto.
+
+Se nessuno e' ancora inquadrato la figura si mostra lo stesso, centrata: e'
+proprio il momento in cui serve, per sapere che posa assumere. Si prova con
+`tools/banco-schermo.html?nessuno=1`.
+
 ### Due strade per ricevere
 
 Il telefono prova nell'ordine:

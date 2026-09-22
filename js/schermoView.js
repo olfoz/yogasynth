@@ -35,13 +35,164 @@
     // inseguimento nervoso, su uno schermo appoggiato per terra, da' fastidio.
     var FOLLOW = 0.06;
 
+    // Colore della figura guida. E' la stessa famiglia di azzurro
+    // dell'avatar sul computer: chi guarda i due schermi deve riconoscere
+    // subito che si tratta della stessa cosa.
+    var GUIDA = '#9fb8ff';
+
     function View(canvas) {
         this.canvas = canvas;
         this.ctx = canvas.getContext('2d');
         this.w = 1;
         this.h = 1;
         this.view = null;      // {s, cx, cy} smussati fra un fotogramma e l'altro
+        this.target = null;    // posa da raggiungere, relativa al bacino
+        this.targetKey = null; // di quale asana e' (e se e' specchiata)
     }
+
+    /**
+     * Tiene da parte la posa da raggiungere.
+     *
+     * Arriva solo quando cambia (vedi TARGET_OGNI in js/schermo.js), quindi
+     * va conservata fra un messaggio e l'altro. La chiave serve a buttarla
+     * via se il computer e' passato a un altro asana e la nuova figura non
+     * e' ancora arrivata: meglio nessuna guida che quella sbagliata.
+     */
+    View.prototype._keepTarget = function (snap) {
+        if (snap.target) {
+            this.target = snap.target;
+            this.targetKey = snap.targetKey || '';
+        } else if (snap.targetKey !== undefined && snap.targetKey !== this.targetKey) {
+            this.target = null;
+        }
+    };
+
+    /**
+     * Porta la posa guida sul corpo di chi pratica: stessa origine sul
+     * bacino, stessa lunghezza del busto. E' la stessa aritmetica che fa il
+     * computer, al contrario — li' si normalizza, qui si rimette in scala.
+     *
+     * Se nessuno e' ancora inquadrato la figura si mostra lo stesso, al
+     * centro: serve proprio in quel momento, per sapere che posa assumere.
+     */
+    View.prototype._anchorTarget = function (snap) {
+        var rel = this.target, k;
+        if (!rel || !rel.hipMid) { return null; }
+
+        var body = snap.body;
+        var hx, hy, torso;
+
+        if (body && body.hipMid && body.shoulderMid) {
+            torso = Math.sqrt(
+                Math.pow(body.shoulderMid[0] - body.hipMid[0], 2) +
+                Math.pow(body.shoulderMid[1] - body.hipMid[1], 2)
+            );
+            if (!(torso > 1e-6)) { return null; }
+            hx = body.hipMid[0];
+            hy = body.hipMid[1];
+        } else {
+            var minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+            for (k in rel) {
+                if (!rel.hasOwnProperty(k)) { continue; }
+                if (rel[k][0] < minX) { minX = rel[k][0]; }
+                if (rel[k][0] > maxX) { maxX = rel[k][0]; }
+                if (rel[k][1] < minY) { minY = rel[k][1]; }
+                if (rel[k][1] > maxY) { maxY = rel[k][1]; }
+            }
+            var a = (snap && snap.aspect) || 4 / 3;
+            torso = Math.min(
+                FILL / Math.max(1e-6, maxY - minY),
+                a * FILL / Math.max(1e-6, maxX - minX)
+            );
+            hx = a / 2 - (minX + maxX) / 2 * torso;
+            hy = 0.5 - (minY + maxY) / 2 * torso;
+        }
+
+        var out = {};
+        for (k in rel) {
+            if (!rel.hasOwnProperty(k)) { continue; }
+            out[k] = [hx + rel[k][0] * torso, hy + rel[k][1] * torso];
+        }
+        return out;
+    };
+
+    /**
+     * La figura da raggiungere: tratteggiata e in sordina, perche' e' un
+     * suggerimento. Il corpo vero si disegna dopo, bianco e pieno, sopra:
+     * quando i due coincidono la posa e' giusta, e si vede senza leggere
+     * nessun numero.
+     */
+    View.prototype._target = function (snap, m, pts) {
+        if (!pts) { return; }
+        var ctx = this.ctx, i, j;
+
+        var torso = 0.2;
+        if (pts.shoulderMid && pts.hipMid) {
+            torso = Math.sqrt(
+                Math.pow(pts.shoulderMid[0] - pts.hipMid[0], 2) +
+                Math.pow(pts.shoulderMid[1] - pts.hipMid[1], 2)
+            );
+        }
+        // piu' spessa del corpo, apposta. La guida si disegna SOTTO: quando
+        // la posa e' giusta il corpo bianco le entra dentro e resta solo un
+        // alone azzurro attorno, che e' il modo piu' immediato di dire
+        // "ci sei". Piu' sottile, sparirebbe sotto il bianco e sotto i raggi.
+        var limb = Math.max(3, torso * 0.09 * m.s);
+
+        var segs = NEUTRAL.slice();
+        var rays = snap.rays || [];
+        for (i = 0; i < rays.length; i++) {
+            for (j = 0; j < (rays[i].segs || []).length; j++) {
+                var a = rays[i].segs[j][0], b = rays[i].segs[j][1];
+                if ((a.charAt(0) === 'l' && b.charAt(0) === 'r') ||
+                    (a.charAt(0) === 'r' && b.charAt(0) === 'l')) { continue; }
+                segs.push([a, b]);
+            }
+        }
+
+        ctx.save();
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = GUIDA;
+        // poco alone, apposta: in una posa raccolta come Uttanasana gli arti
+        // si sovrappongono, e un contorno sfocato li impasta in una macchia
+        ctx.globalAlpha = 0.72;
+        ctx.lineWidth = limb;
+        ctx.shadowBlur = 6;
+        ctx.shadowColor = GUIDA;
+        for (i = 0; i < segs.length; i++) {
+            var p = pts[segs[i][0]], q = pts[segs[i][1]];
+            if (!p || !q) { continue; }
+            ctx.beginPath();
+            ctx.moveTo(m.x(p[0]), m.y(p[1]));
+            ctx.lineTo(m.x(q[0]), m.y(q[1]));
+            ctx.stroke();
+        }
+        // un punto scuro su ogni giunto: senza, una posa piegata su se
+        // stessa diventa un fascio di tratti indistinguibili
+        ctx.globalAlpha = 0.9;
+        ctx.fillStyle = '#0b1026';
+        ctx.shadowBlur = 0;
+        for (i = 0; i < segs.length; i++) {
+            var g = pts[segs[i][0]];
+            if (!g) { continue; }
+            ctx.beginPath();
+            ctx.arc(m.x(g[0]), m.y(g[1]), limb * 0.28, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // la testa a cerchio pieno: da' il verso alla figura, che di
+        // profilo altrimenti si legge male
+        if (pts.nose) {
+            ctx.globalAlpha = 0.72;
+            ctx.shadowBlur = 6;
+            ctx.beginPath();
+            ctx.arc(m.x(pts.nose[0]), m.y(pts.nose[1]),
+                Math.max(4, torso * 0.17 * m.s), 0, Math.PI * 2);
+            ctx.fillStyle = GUIDA;
+            ctx.fill();
+        }
+        ctx.restore();
+    };
 
     View.prototype.resize = function (w, h) {
         var dpr = Math.min(global.devicePixelRatio || 1, 2);
@@ -53,6 +204,20 @@
         this.canvas.style.height = h + 'px';
         this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     };
+
+    /** Unione di due riquadri: basta che uno dei due manchi per tenere l'altro. */
+    function unisci(a, b) {
+        if (!a) { return b; }
+        if (!b) { return a; }
+        var minX = Math.min(a.cx - a.w / 2, b.cx - b.w / 2);
+        var maxX = Math.max(a.cx + a.w / 2, b.cx + b.w / 2);
+        var minY = Math.min(a.cy - a.h / 2, b.cy - b.h / 2);
+        var maxY = Math.max(a.cy + a.h / 2, b.cy + b.h / 2);
+        return {
+            cx: (minX + maxX) / 2, cy: (minY + maxY) / 2,
+            w: Math.max(0.02, maxX - minX), h: Math.max(0.02, maxY - minY)
+        };
+    }
 
     /** Riquadro occupato dal corpo, nello spazio dei landmark. */
     function bodyBox(body) {
@@ -86,12 +251,16 @@
      * allo schermo del telefono, che e' esattamente il problema che questo
      * secondo schermo dovrebbe risolvere.
      */
-    View.prototype._mapper = function (snap) {
+    View.prototype._mapper = function (snap, tgt) {
         var a = (snap && snap.aspect) || 4 / 3;
         var fitAll = Math.min(this.w / a, this.h);
 
         var s = fitAll, cx = a / 2, cy = 0.5;
-        var box = bodyBox(snap && snap.body);
+        // anche la figura guida entra nel riquadro: se la posa da
+        // raggiungere e' piu' larga di quella attuale — braccia in alto
+        // mentre si sta ancora dritti — stringere sul solo corpo la
+        // taglierebbe fuori proprio mentre serve guardarla
+        var box = unisci(bodyBox(snap && snap.body), bodyBox(tgt));
         if (box) {
             s = Math.min(this.w * FILL / box.w, this.h * FILL / box.h);
             // ne' piu' piccolo del fotogramma intero, ne' talmente stretto da
@@ -282,9 +451,12 @@
     View.prototype.render = function (snap, time) {
         this._background();
         if (!snap) { return; }
-        var m = this._mapper(snap);
+        this._keepTarget(snap);
+        var tgt = this._anchorTarget(snap);
+        var m = this._mapper(snap, tgt);
         var rays = snap.rays || [];
         for (var i = 0; i < rays.length; i++) { this._ray(rays[i], m, time || 0); }
+        this._target(snap, m, tgt);
         this._body(snap, m);
         this._progress(snap);
     };

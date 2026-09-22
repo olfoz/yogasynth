@@ -13,7 +13,7 @@ import { GlowBody } from './render/glowBody.js';
 import { GuideAvatar } from './render/avatar.js';
 import { Hud } from './render/hud.js';
 import { PoseTracker } from './pose/tracker.js';
-import { RayTracker, userPoints, fitLine, addMidpoints } from './pose/rays.js';
+import { RayTracker, userPoints, fitLine, addMidpoints, anchorTarget } from './pose/rays.js';
 import { AudioEngine, MAX_HARMONICS } from './music/synth.js';
 import { Practice } from './sequence.js';
 import { FpsMeter } from './fps.js';
@@ -89,37 +89,6 @@ async function loadData() {
     const res = await fetch('./data/asanas.json');
     if (!res.ok) throw new Error('data/asanas.json non raggiungibile (HTTP ' + res.status + ')');
     return res.json();
-}
-
-/**
- * Porta l'asana sul corpo dell'utente: stessa origine sul bacino, stessa
- * scala del busto. Senza questo, i raggi finirebbero dove l'utente non e'.
- */
-function anchorTarget(tPts, uPts, aspect) {
-    let fn;
-    if (uPts && uPts.hipMid && uPts.shoulderMid && tPts.hipMid && tPts.shoulderMid) {
-        const uT = Math.hypot(uPts.shoulderMid.x - uPts.hipMid.x, uPts.shoulderMid.y - uPts.hipMid.y);
-        const tT = Math.hypot(tPts.shoulderMid.x - tPts.hipMid.x, tPts.shoulderMid.y - tPts.hipMid.y);
-        const s = tT > 1e-6 ? uT / tT : 1;
-        fn = p => ({
-            x: (p.x - tPts.hipMid.x) * s + uPts.hipMid.x,
-            y: (p.y - tPts.hipMid.y) * s + uPts.hipMid.y
-        });
-    } else {
-        // nessuno inquadrato: l'asana si mostra comunque, centrato
-        let minY = Infinity, maxY = -Infinity, minX = Infinity, maxX = -Infinity;
-        for (const k in tPts) {
-            minY = Math.min(minY, tPts[k].y); maxY = Math.max(maxY, tPts[k].y);
-            minX = Math.min(minX, tPts[k].x); maxX = Math.max(maxX, tPts[k].x);
-        }
-        const s = 0.66 / Math.max(1e-6, maxY - minY);
-        const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
-        fn = p => ({ x: (p.x - cx) * s + aspect / 2, y: (p.y - cy) * s + 0.5 });
-    }
-
-    const out = {};
-    for (const k in tPts) out[k] = fn(tPts[k]);
-    return out;
 }
 
 /** Riquadro occupato dal corpo, in spazio isotropo. */
@@ -382,6 +351,7 @@ function loop(now) {
     if (schermo && schermo.active) {
         const snap = Schermo.snapshot({
             practice, res, uPts, fits,
+            targetPts: basePts,
             aspect: vp.aspect,
             progress, state, audio,
             maxHarmonics: MAX_HARMONICS

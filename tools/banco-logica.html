@@ -29,6 +29,59 @@ try{
   for(let i=0;i<13;i++){p.advance();rows.push((i+1)+' '+p.current.name+' -> '+p.chord.symbol+' ['+p.chord.notes.map(n=>n.name).join(' ')+'] rette='+p.rays.map(r=>r.id).join(','));}
   log.push(rows.join('\n'));
 
+  // La posa guida arriva al telefono normalizzata sul bacino, e il
+  // telefono la rimette in scala per conto suo. Qui si controlla che la
+  // figura che disegnera' finisca esattamente dove la mette il computer:
+  // se le due aritmetiche si allontanano, sul telefono la guida risulta
+  // fuori posto e nessuno se ne accorge guardando il computer.
+  const Sc = await import('../js/schermo.js');
+  await new Promise((ris, no) => {
+    const t = document.createElement('script');
+    t.src = '../js/schermoView.js';
+    t.onload = ris; t.onerror = () => no(new Error('schermoView.js non caricato'));
+    document.head.appendChild(t);
+  });
+
+  const pv = new S.Practice(data,{mode:'sequence',sequenceId:'surya-namaskara-a'});
+  pv.advance(); pv.advance();          // Urdhva Hastasana: braccia in alto
+
+  // un corpo finto qualunque, purche' con bacino e spalle
+  const corpo = R.addMidpoints({
+    lShoulder:{x:0.62,y:0.33,conf:1}, rShoulder:{x:0.66,y:0.33,conf:1},
+    lHip:{x:0.63,y:0.52,conf:1},      rHip:{x:0.67,y:0.52,conf:1},
+    lKnee:{x:0.63,y:0.70,conf:1},     rKnee:{x:0.67,y:0.70,conf:1},
+    lAnkle:{x:0.63,y:0.88,conf:1},    rAnkle:{x:0.67,y:0.88,conf:1},
+    lElbow:{x:0.62,y:0.42,conf:1},    rElbow:{x:0.66,y:0.42,conf:1},
+    lWrist:{x:0.62,y:0.50,conf:1},    rWrist:{x:0.66,y:0.50,conf:1},
+    nose:{x:0.645,y:0.27,conf:1}
+  });
+
+  const atteso = R.anchorTarget(pv.targetPts, corpo, 1.3333);
+  const messaggio = Sc.Schermo.snapshot({
+    practice: pv,
+    res: { scores: pv.rays.map(() => 0), active: pv.rays.map(() => false), mirrored: false },
+    uPts: corpo, fits: pv.rays.map(() => null), targetPts: pv.targetPts,
+    aspect: 1.3333, progress: 0, state: 'matching', audio: null, maxHarmonics: 8
+  });
+
+  if (!messaggio.target) {
+    bad('il messaggio per il telefono non contiene la posa guida');
+  } else {
+    const vista = new window.SchermoView(document.createElement('canvas'));
+    vista._keepTarget(messaggio);
+    const ottenuto = vista._anchorTarget(messaggio);
+    let peggio = 0, dove = '';
+    for (const k in atteso) {
+      if (!ottenuto[k]) { peggio = 9; dove = k + ' manca'; break; }
+      const e = Math.max(Math.abs(atteso[k].x - ottenuto[k][0]),
+                         Math.abs(atteso[k].y - ottenuto[k][1]));
+      if (e > peggio) { peggio = e; dove = k; }
+    }
+    // 1e-4 e' la precisione con cui i numeri viaggiano (r4 in js/schermo.js)
+    if (peggio < 2e-4) ok('la guida sul telefono cade dove la mette il computer (scarto max ' + peggio.toFixed(6) + ')');
+    else bad('guida fuori posto di ' + peggio.toFixed(4) + ' su ' + dove);
+  }
+
   // "ricomincia": deve tornare al primo passo E alla tonalita' di partenza,
   // non riprendere il circolo delle quinte da dove era arrivato
   const pr = new S.Practice(data,{mode:'sequence',sequenceId:'surya-namaskara-a'});

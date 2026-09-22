@@ -26,6 +26,39 @@ function packPoints(uPts) {
     return out;
 }
 
+/**
+ * La posa da raggiungere, in coordinate relative al bacino.
+ *
+ * Non si mandano le coordinate gia' ancorate sul corpo, che cambierebbero
+ * a ogni fotogramma insieme a chi si muove: si manda la posa normalizzata
+ * — origine sul bacino, unita' di misura la lunghezza del busto — che per
+ * tutta la durata di un asana e' ferma. Il telefono la riancora da solo
+ * sul corpo che sta gia' ricevendo, con la stessa aritmetica che usa il
+ * computer (`anchorTarget` in js/main.js). Cosi' la figura guida segue chi
+ * pratica a ogni fotogramma, ma nei messaggi viaggia solo quando cambia.
+ */
+function packTarget(tPts) {
+    if (!tPts || !tPts.hipMid || !tPts.shoulderMid) return null;
+    const torso = Math.hypot(
+        tPts.shoulderMid.x - tPts.hipMid.x,
+        tPts.shoulderMid.y - tPts.hipMid.y
+    );
+    if (!(torso > 1e-6)) return null;
+    const out = {};
+    for (const k in tPts) {
+        out[k] = [
+            r4((tPts[k].x - tPts.hipMid.x) / torso),
+            r4((tPts[k].y - tPts.hipMid.y) / torso)
+        ];
+    }
+    return out;
+}
+
+// Ogni quanti messaggi si rimanda la posa guida anche se non e' cambiata.
+// Serve a un telefono che si collega a meta' asana: senza, resterebbe
+// senza figura fino al prossimo cambio. A 12 Hz sono circa mezzo secondo.
+const TARGET_OGNI = 8;
+
 export class Schermo {
     /** @param {object} opts { hz } quanti aggiornamenti al secondo */
     constructor({ hz = 20 } = {}) {
@@ -76,7 +109,14 @@ export class Schermo {
      * basta centro e direzione, la lunghezza se la calcola lui per far
      * uscire il raggio dallo schermo.
      */
-    static snapshot({ practice, res, uPts, fits, aspect, progress, state, audio, maxHarmonics }) {
+    static snapshot({ practice, res, uPts, fits, targetPts, aspect, progress, state, audio, maxHarmonics }) {
+        // la posa guida e' ferma per tutto l'asana: si manda quando cambia
+        // (compreso lo specchio, che la ribalta) e ogni tanto per chi arriva
+        const chiave = (practice.current ? practice.current.id : '') + (res.mirrored ? '-m' : '');
+        Schermo._giri = (Schermo._giri || 0) + 1;
+        const rimanda = chiave !== Schermo._chiave || Schermo._giri % TARGET_OGNI === 0;
+        Schermo._chiave = chiave;
+
         return {
             // Marca temporale: sul canale diretto i messaggi possono
             // arrivare fuori ordine (vedi js/peer.js), e uno stato vecchio
@@ -92,6 +132,8 @@ export class Schermo {
             progress: r4(progress),
             done: state === 'done',
             body: packPoints(uPts),
+            targetKey: chiave,
+            target: rimanda ? packTarget(targetPts) : undefined,
             rays: practice.rays.map((ray, i) => {
                 const fit = fits[i];
                 const note = practice.noteFor(i);

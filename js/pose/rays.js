@@ -109,6 +109,45 @@ export function userPoints(landmarks, aspect) {
 }
 
 /**
+ * Porta l'asana sul corpo dell'utente: stessa origine sul bacino, stessa
+ * scala del busto. Senza questo, i raggi finirebbero dove l'utente non e'.
+ *
+ * Sta qui, e non in main.js dov'e' nata, perche' non la usa piu' solo il
+ * computer: anche il telefono deve rimettere in scala la posa guida che
+ * riceve, e lo fa con questa stessa aritmetica (`_anchorTarget` in
+ * js/schermoView.js). Due copie che si allontanano darebbero una figura
+ * guida leggermente fuori posto sul solo telefono, ed e' il genere di
+ * sbaglio che non si nota finche' non e' tardi: tools/banco-logica.html
+ * confronta le due strade a ogni giro.
+ */
+export function anchorTarget(tPts, uPts, aspect) {
+    let fn;
+    if (uPts && uPts.hipMid && uPts.shoulderMid && tPts.hipMid && tPts.shoulderMid) {
+        const uT = Math.hypot(uPts.shoulderMid.x - uPts.hipMid.x, uPts.shoulderMid.y - uPts.hipMid.y);
+        const tT = Math.hypot(tPts.shoulderMid.x - tPts.hipMid.x, tPts.shoulderMid.y - tPts.hipMid.y);
+        const s = tT > 1e-6 ? uT / tT : 1;
+        fn = p => ({
+            x: (p.x - tPts.hipMid.x) * s + uPts.hipMid.x,
+            y: (p.y - tPts.hipMid.y) * s + uPts.hipMid.y
+        });
+    } else {
+        // nessuno inquadrato: l'asana si mostra comunque, centrato
+        let minY = Infinity, maxY = -Infinity, minX = Infinity, maxX = -Infinity;
+        for (const k in tPts) {
+            minY = Math.min(minY, tPts[k].y); maxY = Math.max(maxY, tPts[k].y);
+            minX = Math.min(minX, tPts[k].x); maxX = Math.max(maxX, tPts[k].x);
+        }
+        const s = 0.66 / Math.max(1e-6, maxY - minY);
+        const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
+        fn = p => ({ x: (p.x - cx) * s + aspect / 2, y: (p.y - cy) * s + 0.5 });
+    }
+
+    const out = {};
+    for (const k in tPts) out[k] = fn(tPts[k]);
+    return out;
+}
+
+/**
  * Retta ai minimi quadrati (PCA) su un insieme di punti.
  * @returns {{collinearity, cx, cy, dirx, diry, tMin, tMax}|null}
  */
