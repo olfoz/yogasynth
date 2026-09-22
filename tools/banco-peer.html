@@ -89,6 +89,10 @@ try {
     const { PeerHost, caricaPeerJS, nuovoCodice, caricaIce } = await import('../js/peer.js?v=' + Date.now());
 
     const ice = await caricaIce();
+    const e = caricaIce.esito || {};
+    dire(e.letto
+        ? 'ice.json letto da ' + e.url + ' — ' + e.server + ' server, ' + e.turn + ' TURN'
+        : 'ice.json NON letto (' + (e.motivo || '?') + ') da ' + e.url + ' — si va avanti senza TURN');
     const conTurn = ice.iceServers.some(s => /^turns?:/.test(String(s.urls)));
     dire(soloRelay
         ? "modalita RELAY: tutto obbligato a passare dal TURN"

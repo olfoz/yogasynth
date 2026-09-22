@@ -45,7 +45,14 @@ const ICE_MINIMO = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
 
 let iceCache = null;
 
-/** Server di appoggio per WebRTC, dal file dati (vedi data/ice.json). */
+/**
+ * Server di appoggio per WebRTC, dal file dati (vedi data/ice.json).
+ *
+ * Lascia detto com'e' andata in `caricaIce.esito`. Serve perche' il ripiego
+ * sul minimo e' silenzioso per scelta — l'app deve partire lo stesso — ma
+ * cosi' diventa indistinguibile da "non ho configurato nessun TURN", e si
+ * finisce a cercare l'errore nel posto sbagliato.
+ */
 export async function caricaIce() {
     if (iceCache) return iceCache;
     try {
@@ -54,9 +61,16 @@ export async function caricaIce() {
         const dati = await res.json();
         if (!dati.iceServers || !dati.iceServers.length) throw new Error('nessun server elencato');
         iceCache = { iceServers: dati.iceServers };
+        caricaIce.esito = {
+            url: ICE_URL,
+            letto: true,
+            server: dati.iceServers.length,
+            turn: dati.iceServers.filter(s => /^turns?:/.test(String(s.urls))).length
+        };
     } catch (e) {
-        console.info('[peer] data/ice.json non caricato (' + e.message + '): uso il minimo.');
+        console.info('[peer] ' + ICE_URL + ' non caricato (' + e.message + '): uso il minimo.');
         iceCache = ICE_MINIMO;
+        caricaIce.esito = { url: ICE_URL, letto: false, motivo: e.message, server: 1, turn: 0 };
     }
     return iceCache;
 }
