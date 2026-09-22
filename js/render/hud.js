@@ -48,8 +48,11 @@ export class Hud {
             const y = (padY + i * (H - padY * 2) / 4).toFixed(1);
             svg += `<line x1="3" y1="${y}" x2="${W - 3}" y2="${y}" stroke="rgba(255,255,255,0.35)" stroke-width="1"/>`;
         }
+        // Il colore NON si fissa qui. Quale retta tiene quale altezza si
+        // decide durante la pratica, in ordine di arrivo: lo dipinge
+        // updateNotes, fotogramma per fotogramma.
         notes.forEach((n, i) => {
-            const color = rays[i] ? rays[i].color : '#ffffff';
+            const color = '#ffffff';
             const cx = (padX + step * i).toFixed(1);
             const cy = yFor(n.midi).toFixed(1);
             svg += `<circle id="ysNote${i}" cx="${cx}" cy="${cy}" r="5.5" `
@@ -63,16 +66,24 @@ export class Hud {
         this.noteEls = notes.map((_, i) => document.getElementById('ysNote' + i));
     }
 
-    /** Una nota si gonfia e si accende con gli armonici che ha accumulato. */
-    updateNotes(scores, active, harmonicsOf, maxHarmonics) {
+    /**
+     * Una nota si gonfia e si accende con gli armonici che ha accumulato, e
+     * prende il colore della retta che in questo momento la sta tenendo.
+     * @param {Array<{on, score, harmonics, color}>} voci una per altezza, dal grave
+     */
+    updateNotes(voci, maxHarmonics) {
         for (let i = 0; i < this.noteEls.length; i++) {
             const c = this.noteEls[i];
-            if (!c) continue;
-            const frac = harmonicsOf(i) / maxHarmonics;
-            c.setAttribute('r', (5.5 + (active[i] ? 1.8 : 0) + frac * 1.6).toFixed(1));
-            c.setAttribute('fill-opacity', (0.15 + Math.max(scores[i] || 0, frac) * 0.85).toFixed(2));
-            c.style.filter = active[i]
-                ? `drop-shadow(0 0 ${(3 + frac * 6).toFixed(1)}px ${c.getAttribute('stroke')})`
+            const v = voci[i];
+            if (!c || !v) continue;
+            const frac = v.harmonics / maxHarmonics;
+            const colore = v.color || 'rgba(255,255,255,0.45)';
+            c.setAttribute('stroke', colore);
+            c.setAttribute('fill', colore);
+            c.setAttribute('r', (5.5 + (v.on ? 1.8 : 0) + frac * 1.6).toFixed(1));
+            c.setAttribute('fill-opacity', (0.15 + Math.max(v.score, frac) * 0.85).toFixed(2));
+            c.style.filter = v.on
+                ? `drop-shadow(0 0 ${(3 + frac * 6).toFixed(1)}px ${colore})`
                 : 'none';
         }
     }

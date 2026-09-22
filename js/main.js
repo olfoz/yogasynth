@@ -19,13 +19,21 @@ import { Practice } from './sequence.js';
 import { FpsMeter } from './fps.js';
 import { Intro } from './intro.js';
 import { Schermo } from './schermo.js';
+import { VoiceOrder } from './music/voiceOrder.js';
 import { PeerHost } from './peer.js';
 import { mostraQr } from './qr.js';
 
-const HOLD_SECONDS = 6;            // tenuta dell'asana completo per superarlo
-const POSITION_TIMEOUT_MS = 30000; // oltre questo tempo si passa comunque avanti
-const NAME_REVEAL_MS = 2400;
-const DONE_PAUSE_MS = 3200;
+// Tempi della pratica, dimezzati rispetto alle prime prove: sei secondi di
+// tenuta e trenta di attesa facevano sembrare la sequenza ferma.
+const HOLD_SECONDS = 3;            // tenuta dell'asana completo per superarlo
+const POSITION_TIMEOUT_MS = 15000; // oltre questo tempo si passa comunque avanti
+const NAME_REVEAL_MS = 1200;
+
+// La pausa fra un asana e il successivo e' a scelta: e' dentro questa pausa
+// che la voce annuncia il prossimo, quindi chi vuole ascoltarla con calma la
+// allunga, e chi conosce la sequenza la accorcia.
+const PAUSE_DEFAULT_MS = 1500;
+let donePauseMs = PAUSE_DEFAULT_MS;
 
 // Inquadratura automatica: quanta parte dello schermo deve occupare il corpo,
 // e quanto lentamente ci si arriva. Lento apposta — un inseguimento nervoso
@@ -62,6 +70,7 @@ let intro = null;
 let schermo = null;
 let peer = null;
 const fps = new FpsMeter({ threshold: 40 });
+const ordine = new VoiceOrder();
 
 let running = false;
 let showAvatar = true;
@@ -165,8 +174,20 @@ function goToNextAsana(announce) {
     asanaChangedAt = performance.now();
     state = 'matching';
     holdStart = 0;
+    ordine.setSize(practice.rays.length);
+}
 
-    if (announce) speak(practice.current.name);
+/**
+ * Annuncia il PROSSIMO asana, non quello appena comparso.
+ *
+ * Prima la voce parlava dopo il cambio, e diceva il nome di una posa che si
+ * stava gia' guardando: un'informazione in ritardo. Adesso parla appena
+ * l'asana e' superato, mentre scorre la pausa, cosi' quando la posa nuova
+ * compare si sa gia' cos'e'.
+ */
+function announceNext() {
+    const p = practice.peek(false);
+    if (p && p.asana) speak(p.asana.name);
 }
 
 function speak(name) {
@@ -196,7 +217,7 @@ function describe(uPts, res) {
         return `${practice.chord.symbol} completo — mantieni, ogni secondo aggiunge un armonico`;
     }
     return practice.rays.map((r, i) => {
-        const note = practice.noteFor(i);
+        const note = practice.noteFor(ordine.show[i]);
         const n = note ? note.name : '';
         const cov = res.coverage ? res.coverage[i] : 1;
         if (cov < 0.4) return `${r.label} — fuori campo`;
@@ -249,7 +270,8 @@ function loop(now) {
             if (holdFrac >= 1) {
                 completed++;
                 state = 'done';
-                doneUntil = now + DONE_PAUSE_MS;
+                doneUntil = now + donePauseMs;
+                announceNext();
                 holdStart = 0;
                 audio.playChime(true);
             }
@@ -259,7 +281,8 @@ function loop(now) {
 
         if (state === 'matching' && now - asanaChangedAt >= POSITION_TIMEOUT_MS) {
             audio.playChime(false);
-            goToNextAsana(true);
+            announceNext();
+            goToNextAsana(false);
             res = tracker.update(uPts, practice.targetPts, practice.targetPtsMirror);
         }
     } else {
@@ -275,10 +298,16 @@ function loop(now) {
         }
     }
 
-    // audio: la retta accende la nota, il punteggio ne decide la purezza
-    for (let i = 0; i < practice.rays.length; i++) {
-        audio.setActive(i, res.active[i]);
-        audio.setPurity(i, Math.max(0, Math.min(1, ((res.scores[i] || 0) - 0.35) / 0.6)));
+    // Audio. La retta accende una nota e il punteggio ne decide la purezza,
+    // ma QUALE nota lo dice l'ordine di arrivo: la prima retta a posto
+    // prende la piu' grave (vedi js/music/voiceOrder.js).
+    ordine.update(res.active);
+    for (let v = 0; v < practice.rays.length; v++) {
+        const i = ordine.rayOf(v);
+        audio.setActive(v, i >= 0);
+        if (i >= 0) {
+            audio.setPurity(v, Math.max(0, Math.min(1, ((res.scores[i] || 0) - 0.35) / 0.6)));
+        }
     }
     audio.update();
 
@@ -343,7 +372,15 @@ function loop(now) {
     hud.clear();
     if (state === 'matching') hud.drawProgressBorder(progress);
     hud.drawBigName(practice.current.name, nameAlpha, practice.chord.symbol + '  ·  ' + practice.current.cue);
-    hud.updateNotes(res.scores, res.active, i => audio.harmonicsOf(i), MAX_HARMONICS);
+    hud.updateNotes(practice.chord.notes.map((n, v) => {
+        const i = ordine.rayOf(v);
+        return {
+            on: i >= 0,
+            score: i >= 0 ? (res.scores[i] || 0) : 0,
+            harmonics: audio.harmonicsOf(v),
+            color: i >= 0 ? practice.rays[i].color : null
+        };
+    }), MAX_HARMONICS);
     hud.setStatus(describe(uPts, res));
 
     stage.render();
@@ -352,6 +389,7 @@ function loop(now) {
         const snap = Schermo.snapshot({
             practice, res, uPts, fits,
             targetPts: basePts,
+            noteOf: i => practice.noteFor(ordine.show[i]),
             aspect: vp.aspect,
             progress, state, audio,
             maxHarmonics: MAX_HARMONICS
@@ -403,6 +441,9 @@ async function start() {
     // modalita'
     const modeVal = el('modeSelect').value;
     localStorage.setItem('yogasynth.mode', modeVal);
+
+    donePauseMs = parseInt(el('pauseSelect').value, 10) || PAUSE_DEFAULT_MS;
+    localStorage.setItem('yogasynth.pausa', String(donePauseMs));
     const mode = modeVal === 'random' ? 'random' : 'sequence';
     const sequenceId = mode === 'sequence'
         ? (modeVal.split(':')[1] || Object.keys(data.sequences)[0])
@@ -648,6 +689,10 @@ function buildModeSelect() {
     const urlSeq = params.get('sequence');
     if (urlSeq) sel.value = 'sequence:' + urlSeq;
     else if (params.get('mode') === 'random') sel.value = 'random';
+
+    const pausa = localStorage.getItem('yogasynth.pausa');
+    const ps = el('pauseSelect');
+    if (pausa && [...ps.options].some(x => x.value === pausa)) ps.value = pausa;
 }
 
 /** Anteprima dell'accordo nel popup iniziale, prima ancora di partire. */

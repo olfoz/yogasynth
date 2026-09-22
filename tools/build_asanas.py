@@ -17,6 +17,14 @@ Angoli in gradi, misurati da +x (destra) con y verso il basso, come sullo
 schermo: -90 = verso l'alto, +90 = verso il basso, 0 = in avanti (il corpo
 guarda verso destra).
 
+Ogni posa dichiara anche 'ground': quali giunti poggiano a terra. Non e'
+decorazione, e' il controllo che manca a tutto il resto. L'avatar segue i
+dati con scarti sotto l'uno per cento anche quando i dati sono sbagliati,
+quindi nessuna misura avatar-contro-dati puo' accorgersi di un asana
+sbagliato. Sapere quali giunti dovrebbero stare sul pavimento invece si':
+se non sono alla stessa altezza, o se qualcos'altro e' finito piu' in basso,
+l'angolo e' sbagliato. Lo verifica tools/banco-pose.html.
+
     python tools/build_asanas.py          # riscrive data/asanas.json
     python tools/build_asanas.py --check  # stampa e basta
 """
@@ -139,6 +147,7 @@ POSES = [
         'quality': 'major', 'rays': ['spine', 'arms', 'legs'],
         'cue': "Una sola colonna: caviglie, bacino, spalle e testa sullo stesso raggio.",
         # in piedi, braccia lungo i fianchi: tutto a piombo
+        'ground': ['ankle'],
         'angles': {'spine': -90, 'head': -86, 'upperArm': 92, 'foreArm': 90,
                    'thigh': 90, 'shin': 90},
     },
@@ -147,6 +156,7 @@ POSES = [
         'quality': 'major', 'rays': ['spine', 'arms', 'legs'],
         'cue': "Le braccia prolungano la spina dorsale verso l'alto: un unico raggio dai talloni alle dita.",
         # braccia sopra la testa, leggero slancio all'indietro
+        'ground': ['ankle'],
         'angles': {'spine': -92, 'head': -84, 'upperArm': -84, 'foreArm': -88,
                    'thigh': 90, 'shin': 90},
     },
@@ -154,9 +164,19 @@ POSES = [
         'id': 'uttanasana', 'name': 'Uttanasana', 'label': 'Piegamento in avanti',
         'quality': 'sus2', 'rays': ['spine', 'upperArms', 'legs', 'foreArms'],
         'cue': "Gambe a piombo, busto che cade lungo il loro raggio. Le braccia sono piegate: due raggi distinti, quindi una quarta nota.",
-        # busto rovesciato lungo le gambe, mani a terra: i gomiti devono
-        # piegarsi molto, ed e' per questo che l'asana ha quattro rette
-        'angles': {'spine': 85, 'head': 78, 'upperArm': 108, 'foreArm': 22,
+        # Busto rovesciato lungo le gambe, MANI A TERRA accanto ai piedi.
+        #
+        # La spalla, a fine piegamento, sta solo 0.13 sopra il pavimento
+        # mentre il braccio intero ne misura 0.24: le mani arrivano a terra
+        # soltanto col gomito molto piegato, ed e' per questo che l'asana ha
+        # quattro rette invece di tre. Il gomito va indietro e l'avambraccio
+        # scende in avanti; la versione precedente aveva il braccio a 108, e
+        # il polso finiva tre centesimi SOTTO il pavimento e dieci in avanti,
+        # con la mano che sporgeva in orizzontale davanti ai piedi.
+        # La testa segue il busto (88 contro 85) invece di rialzarsi: cosi'
+        # il raggio della spina resta dritto fino al naso.
+        'ground': ['ankle', 'wrist'],
+        'angles': {'spine': 85, 'head': 88, 'upperArm': 133, 'foreArm': 21,
                    'thigh': 90, 'shin': 90},
     },
     {
@@ -164,6 +184,7 @@ POSES = [
         'quality': 'sus2', 'rays': ['spine', 'arms', 'legs'],
         'cue': "Schiena piatta come un raggio orizzontale, perpendicolare al raggio delle gambe.",
         # schiena piatta e orizzontale, sguardo avanti, dita alle tibie
+        'ground': ['ankle'],
         'angles': {'spine': 2, 'head': -8, 'upperArm': 108, 'foreArm': 112,
                    'thigh': 90, 'shin': 90},
     },
@@ -173,6 +194,7 @@ POSES = [
         'cue': "Dalla testa ai talloni un raggio solo. Gomiti a novanta gradi: avambracci a piombo, secondo raggio.",
         # corpo teso in diagonale, gomiti a 90 gradi stretti alle costole:
         # braccio all'indietro, avambraccio a piombo
+        'ground': ['wrist'],
         'angles': {'spine': -8, 'head': -8, 'upperArm': 160, 'foreArm': 82,
                    'thigh': 172, 'shin': 172},
     },
@@ -183,6 +205,7 @@ POSES = [
         # petto aperto in salita, braccia tese a piombo. Le gambe scendono
         # quel tanto che basta perche' le caviglie tocchino il pavimento
         # all'altezza delle mani: in questa posa sono i due appoggi a terra.
+        'ground': ['wrist', 'ankle'],
         'angles': {'spine': -30, 'head': -18, 'upperArm': 88, 'foreArm': 90,
                    'thigh': 165, 'shin': 165},
     },
@@ -197,6 +220,7 @@ POSES = [
         # pavimento il lato delle braccia sta piu' disteso di quello delle
         # gambe. Con il bacino a 0.36 dal suolo: asin(0.36/0.537)=42 gradi
         # per le braccia, asin(0.36/0.386)=69 gradi per le gambe.
+        'ground': ['wrist', 'ankle'],
         'angles': {'spine': 42, 'head': 42, 'upperArm': 42, 'foreArm': 42,
                    'thigh': 111, 'shin': 111},
     },
@@ -244,6 +268,7 @@ def main():
             'quality': pose['quality'],
             'rays': pose['rays'],
             'cue': pose['cue'],
+            'ground': pose['ground'],
             'angles': pose['angles'],
             'landmarks': build(pose),
         })

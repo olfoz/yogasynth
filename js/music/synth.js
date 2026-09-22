@@ -10,7 +10,20 @@
 //      sparisce. Il suono e' letteralmente tanto piu' armonico quanto piu'
 //      la posizione e' corretta.
 
-export const MAX_HARMONICS = 8;
+/**
+ * Quali armonici guadagna una voce, nell'ordine in cui li guadagna.
+ *
+ * Non 1,2,3...8: solo ottave e quinte, cioe' i multipli fatti di 2 e di 3.
+ * Il quinto armonico e' una terza maggiore e il settimo una settima minore,
+ * e sono loro a imporre un colore all'accordo qualunque colore avesse:
+ * in Si minore il quinto armonico del basso e' un Re# che batte contro il
+ * Re della terza, in Do maggiore il settimo e' un Si bemolle che batte
+ * contro il Si. Ottave e quinte invece non prendono posizione, quindi la
+ * qualita' dell'accordo resta quella scritta nell'asana.
+ */
+const SERIE = [1, 2, 3, 4, 6, 8, 12, 16];
+
+export const MAX_HARMONICS = SERIE.length;
 export const HARMONIC_INTERVAL = 1.0;   // un armonico in piu' per ogni secondo di tenuta
 
 class DroneVoice {
@@ -46,7 +59,7 @@ class DroneVoice {
         this.tone.connect(this.engine.voiceBus);
 
         this.partials = [];
-        for (let n = 1; n <= MAX_HARMONICS; n++) {
+        for (const n of SERIE) {
             const g = ctx.createGain();
             g.gain.value = 0;
             g.connect(this.voiceGain);
@@ -89,7 +102,12 @@ class DroneVoice {
             const f = this.def.freq * part.n * stretch;
             part.oscA.frequency.setTargetAtTime(f, t, tau);
             part.oscB.frequency.setTargetAtTime(f, t, tau);
-            const det = 3 + err * 42;    // battimento che si chiude sulla posa giusta
+            // Il battimento si chiude sulla posa giusta. Il residuo va diviso
+            // per l'ordine del parziale: tre centesimi di tono sono un
+            // luccichio lento sulla fondamentale (0.2 Hz) ma otto battiti al
+            // secondo sul sedicesimo armonico, cioe' ruvidezza. La parte
+            // dovuta all'errore invece resta piena: e' li' che deve sporcare.
+            const det = 3 / part.n + err * 42;
             part.oscA.detune.setTargetAtTime(-det, t, tau);
             part.oscB.detune.setTargetAtTime(det, t, tau);
         }
@@ -108,9 +126,10 @@ class DroneVoice {
         if (this.state !== 'on') return;
         const t = this.engine.ctx.currentTime;
         if (this.harmonics < MAX_HARMONICS && t >= this.nextHarmonicAt) {
-            const n = this.harmonics + 1;
-            this.partials[n - 1].gain.gain.setTargetAtTime(0.5 / n, t, 0.9);
-            this.harmonics = n;
+            const i = this.harmonics;            // il prossimo della serie
+            const part = this.partials[i];
+            part.gain.gain.setTargetAtTime(0.5 / part.n, t, 0.9);
+            this.harmonics = i + 1;
             this.nextHarmonicAt += HARMONIC_INTERVAL;
         }
     }

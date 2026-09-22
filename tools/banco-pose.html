@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<title>banco pose — yogasynth</title>
+<style>
+  body { margin: 0; background: #0b0d16; color: #cfd6ff;
+         font: 12px ui-monospace, Consolas, monospace; }
+  canvas { display: block; }
+  #o { padding: 8px 10px; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="o">caricamento…</div>
+<script type="module">
+/*
+ * Disegna OGNI asana della sequenza come scheletro, con il pavimento e le
+ * rette su cui il corpo dovrebbe adagiarsi.
+ *
+ * Perche' esiste, e perche' e' in 2D. banco-avatar misura quanto l'avatar si
+ * scosta dai dati; quando sono i DATI a essere sbagliati quella misura resta
+ * perfetta, perche' l'avatar segue fedelmente una posa che non e' l'asana.
+ * E' successo con Uttanasana: il polso finiva tre centesimi sotto il
+ * pavimento e la mano sporgeva in orizzontale davanti ai piedi, mentre gli
+ * scarti avatar-dati restavano sotto lo 0.6%. L'errore era nell'angolo del
+ * braccio, cioe' nei dati.
+ *
+ * Quindi qui si guardano i dati e basta: niente three.js, niente FBX da
+ * 24 MB, niente WebGL. Gira ovunque e non puo' fallire per motivi suoi.
+ *
+ *   chrome --headless=new --virtual-time-budget=8000
+ *          --window-size=1500,560 --screenshot=pose.png
+ *          http://127.0.0.1:8941/tools/banco-pose.html
+ */
+const out = document.getElementById('o');
+const cv = document.getElementById('c');
+const g = cv.getContext('2d');
+
+const OSSA = [
+    ['hipMid', 'shoulderMid'], ['shoulderMid', 'nose'],
+    ['lShoulder', 'lElbow'], ['lElbow', 'lWrist'],
+    ['rShoulder', 'rElbow'], ['rElbow', 'rWrist'],
+    ['lHip', 'lKnee'], ['lKnee', 'lAnkle'],
+    ['rHip', 'rKnee'], ['rKnee', 'rAnkle'],
+    ['lShoulder', 'rShoulder'], ['lHip', 'rHip']
+];
+
+const W = 214, H = 470;
+
+function punti(L) {
+    const p = {};
+    for (const k in L) { p[k] = { x: L[k][0], y: L[k][1] }; }
+    p.shoulderMid = { x: (p.lShoulder.x + p.rShoulder.x) / 2, y: (p.lShoulder.y + p.rShoulder.y) / 2 };
+    p.hipMid = { x: (p.lHip.x + p.rHip.x) / 2, y: (p.lHip.y + p.rHip.y) / 2 };
+    return p;
+}
+
+/** Retta ai minimi quadrati, la stessa di fitLine in js/pose/rays.js. */
+function retta(P) {
+    const n = P.length;
+    const mx = P.reduce((s, q) => s + q.x, 0) / n;
+    const my = P.reduce((s, q) => s + q.y, 0) / n;
+    let Sxx = 0, Syy = 0, Sxy = 0;
+    for (const q of P) { const dx = q.x - mx, dy = q.y - my; Sxx += dx * dx; Syy += dy * dy; Sxy += dx * dy; }
+    Sxx /= n; Syy /= n; Sxy /= n;
+    const tr = Sxx + Syy, det = Sxx * Syy - Sxy * Sxy;
+    const rad = Math.sqrt(Math.max(0, tr * tr / 4 - det));
+    const L1 = tr / 2 + rad, L2 = Math.max(0, tr / 2 - rad);
+    let vx, vy;
+    if (Math.abs(Sxy) > 1e-12) { vx = L1 - Syy; vy = Sxy; }
+    else if (Sxx >= Syy) { vx = 1; vy = 0; } else { vx = 0; vy = 1; }
+    const nn = Math.hypot(vx, vy) || 1;
+    return { cx: mx, cy: my, dx: vx / nn, dy: vy / nn,
+             dirittezza: L1 > 1e-12 ? 1 - L2 / L1 : 1 };
+}
+
+try {
+    const dati = await (await fetch('../data/asanas.json?v=' + Date.now())).json();
+    const lib = dati.rayLibrary;
+    const seq = dati.sequences[Object.keys(dati.sequences)[0]];
+
+    const visti = new Set();
+    const elenco = [];
+    for (const id of seq.steps) {
+        if (visti.has(id)) { continue; }
+        visti.add(id);
+        elenco.push(dati.asanas.find(a => a.id === id));
+    }
+
+    cv.width = W * elenco.length;
+    cv.height = H;
+    g.fillStyle = '#0b0d16';
+    g.fillRect(0, 0, cv.width, cv.height);
+
+    const righe = [];
+    let guai = 0;
+
+    elenco.forEach((a, i) => {
+        const p = punti(a.landmarks);
+        const ox = i * W;
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        for (const key in p) {
+            minX = Math.min(minX, p[key].x); maxX = Math.max(maxX, p[key].x);
+            minY = Math.min(minY, p[key].y); maxY = Math.max(maxY, p[key].y);
+        }
+        const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
+        // stessa scala sui due assi, o una posa dritta sembrerebbe storta
+        const k = Math.min(W * 0.76 / Math.max(0.02, maxX - minX),
+                           H * 0.78 / Math.max(0.02, maxY - minY));
+        const X = v => ox + W / 2 + (v - cx) * k;
+        const Y = v => H / 2 + (v - cy) * k;
+
+        // le rette per prime: il corpo ci si deve adagiare sopra
+        const D = Math.hypot(W, H);
+        // La rettitudine si misura sulla MEDIANA. Di profilo i due lati sono
+        // separati di un centimetro artificiale (HALF_WIDTH in
+        // build_asanas.py) solo per non far coincidere i punti: su un
+        // avambraccio quasi verticale quello scarto e' perpendicolare alla
+        // retta e la farebbe sembrare storta quando non lo e'.
+        const mediano = j => {
+            const b = j.replace(/^[lr]/, '');
+            const L = p['l' + b], R = p['r' + b];
+            return (L && R) ? { x: (L.x + R.x) / 2, y: (L.y + R.y) / 2 } : p[j];
+        };
+        (a.rays || []).forEach(id => {
+            const r = retta(lib[id].joints.map(mediano));
+            g.save();
+            g.strokeStyle = lib[id].color;
+            g.globalAlpha = 0.55;
+            g.lineWidth = 2;
+            g.beginPath();
+            g.moveTo(X(r.cx) - r.dx * D, Y(r.cy) - r.dy * D);
+            g.lineTo(X(r.cx) + r.dx * D, Y(r.cy) + r.dy * D);
+            g.stroke();
+            g.restore();
+            if (r.dirittezza < 0.985) {
+                righe.push('  ' + a.id + ': la retta ' + id + ' non e\' dritta (' +
+                           r.dirittezza.toFixed(3) + ')');
+                guai++;
+            }
+        });
+
+        // Il pavimento lo dichiara l'asana: in Chaturanga il peso sta sulle
+        // mani e la caviglia resta in alto, perche' si e' sulle punte.
+        const appoggi = (a.ground || ['ankle']).map(n => {
+            const A = 'l' + n.charAt(0).toUpperCase() + n.slice(1);
+            const B = 'r' + n.charAt(0).toUpperCase() + n.slice(1);
+            return { nome: n, y: Math.max(p[A].y, p[B].y) };
+        });
+        const suolo = Math.max(...appoggi.map(v => v.y));
+        g.strokeStyle = 'rgba(255,255,255,0.3)';
+        g.lineWidth = 1;
+        g.beginPath(); g.moveTo(ox + 4, Y(suolo)); g.lineTo(ox + W - 4, Y(suolo)); g.stroke();
+
+        g.strokeStyle = '#e8ecff';
+        g.lineWidth = 3;
+        g.lineCap = 'round';
+        for (const os of OSSA) {
+            if (!p[os[0]] || !p[os[1]]) { continue; }
+            g.beginPath();
+            g.moveTo(X(p[os[0]].x), Y(p[os[0]].y));
+            g.lineTo(X(p[os[1]].x), Y(p[os[1]].y));
+            g.stroke();
+        }
+        g.fillStyle = '#ff5ea8';
+        for (const key in p) {
+            if (key === 'shoulderMid' || key === 'hipMid' || key === 'nose') { continue; }
+            g.beginPath(); g.arc(X(p[key].x), Y(p[key].y), 3.2, 0, Math.PI * 2); g.fill();
+        }
+        g.fillStyle = '#ffd166';   // la testa, per capire il verso
+        g.beginPath(); g.arc(X(p.nose.x), Y(p.nose.y), 6, 0, Math.PI * 2); g.fill();
+
+        g.fillStyle = '#cfd6ff';
+        g.font = '12px ui-monospace, monospace';
+        g.fillText(a.name, ox + 6, 15);
+        g.fillStyle = '#7d86b8';
+        g.fillText(a.rays.join(' '), ox + 6, H - 8);
+
+        // Primo controllo: i giunti dichiarati a terra devono stare alla
+        // stessa altezza. La tolleranza e' larga perche' i talloni, nel cane
+        // a testa in giu', si staccano un po' e resta comunque un cane a
+        // testa in giu'; un angolo sbagliato sposta molto di piu'.
+        const dislivello = suolo - Math.min(...appoggi.map(v => v.y));
+        if (appoggi.length > 1 && dislivello > 0.04) {
+            righe.push('  ' + a.id + ': gli appoggi non sono alla stessa altezza (' +
+                       appoggi.map(v => v.nome + ' ' + v.y.toFixed(3)).join(', ') + ')');
+            guai++;
+        }
+        // Secondo: niente deve finire sotto il pavimento.
+        for (const key in p) {
+            if (key === 'shoulderMid' || key === 'hipMid') { continue; }
+            const sotto = p[key].y - suolo;
+            if (sotto > 0.01) {
+                righe.push('  ' + a.id + ': ' + key + ' sotto il pavimento di ' + sotto.toFixed(3));
+                guai++;
+            }
+        }
+    });
+
+    righe.unshift(guai
+        ? guai + ' cose da guardare:'
+        : 'nessuna posa sfonda il pavimento, nessuna retta e\' storta');
+    out.textContent = righe.join('\n');
+} catch (e) {
+    out.textContent = 'ROTTO: ' + ((e && e.stack) || e);
+}
+</script>
+</body>
+</html>

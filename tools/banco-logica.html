@@ -82,6 +82,34 @@ try{
     else bad('guida fuori posto di ' + peggio.toFixed(4) + ' su ' + dove);
   }
 
+  // L'ordine delle note: la prima retta che va in posizione prende sempre
+  // l'altezza piu' grave, qualunque parte del corpo sia.
+  const V = await import('../js/music/voiceOrder.js');
+  const vo = new V.VoiceOrder();
+  vo.setSize(3);
+  vo.update([false, false, true]);            // entrano le gambe, per prime
+  if (vo.of[2] === 0) ok("chi arriva per primo prende la nota piu’ grave");
+  else bad('la prima retta a posto ha preso la voce ' + vo.of[2] + ', non la 0');
+
+  vo.update([true, false, true]);             // poi la spina
+  if (vo.of[2] === 0 && vo.of[0] === 1) ok("chi arriva dopo prende la successiva, e chi c’era non si sposta");
+  else bad('assegnazione dopo il secondo arrivo: ' + JSON.stringify(vo.of));
+
+  vo.update([true, true, true]);
+  const ordinate = vo.of.slice().sort((x, y) => x - y).join(',');
+  if (ordinate === '0,1,2') ok('a rette tutte accese le tre altezze sono tutte usate');
+  else bad('altezze usate: ' + ordinate);
+
+  const tutte = new V.VoiceOrder();
+  tutte.setSize(3);
+  tutte.update([true, true, true]);           // tutto insieme
+  if (tutte.of.join(',') === '0,1,2') ok('se il corpo va a posto tutto insieme si torna a spina-braccia-gambe');
+  else bad("a parita’ di fotogramma: " + tutte.of.join(","));
+
+  vo.update([false, false, false]);
+  if (vo.of.join(',') === '-1,-1,-1') ok('uscendo di posizione le altezze si liberano');
+  else bad('dopo lo spegnimento: ' + vo.of.join(','));
+
   // "ricomincia": deve tornare al primo passo E alla tonalita' di partenza,
   // non riprendere il circolo delle quinte da dove era arrivato
   const pr = new S.Practice(data,{mode:'sequence',sequenceId:'surya-namaskara-a'});

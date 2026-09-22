@@ -31,9 +31,54 @@ Tre cose muovono il suono:
   multipli esatti quando sei preciso (`js/music/synth.js`, `applyPurity`);
 - **tenuta** → **un armonico in più per ogni secondo** in cui mantieni.
 
-Quando tutte le rette tengono insieme per 6 secondi l'asana è superato.
-Se non ci riesci entro 30 secondi si passa avanti con una campana e la voce
-che annuncia il prossimo.
+Quale nota tocchi a quale retta **non dipende dalla parte del corpo**: la
+prende chi arriva. La prima retta che va in posizione suona la più grave, la
+seconda quella di mezzo, la terza l'acuta, così l'accordo si costruisce
+sempre dal basso ([`js/music/voiceOrder.js`](js/music/voiceOrder.js)). Prima
+l'altezza era legata alla retta — spina grave, braccia media, gambe acuta — e
+chi sistemava le gambe per prime sentiva partire l'acuto da solo, senza
+fondamenta sotto. Se il corpo va a posto tutto insieme si torna comunque alla
+disposizione naturale.
+
+Quando tutte le rette tengono insieme per 3 secondi l'asana è superato.
+Se non ci riesci entro 15 secondi si passa avanti con una campana. La voce
+annuncia **il prossimo** asana appena quello corrente si chiude, non dopo il
+cambio: quando la posa nuova compare sai già cos'è. È dentro quella pausa che
+parla, e la pausa si sceglie nella schermata iniziale (0,8 / 1,5 / 3 / 5
+secondi) — chi conosce la sequenza la accorcia, chi vuole ascoltare con calma
+la allunga.
+
+### Perché l'accordo non stona
+
+Con gli armonici al completo l'accordo diventava ruvido, e la causa non erano
+le qualità (minore, sus2…) ma il **registro**. Misurando la ruvidezza
+(Plomp‑Levelt) sulla sequenza intera, le coppie peggiori erano sempre fra le
+*fondamentali* delle voci — Si2 contro Re3 in Si minore, Mi3 contro Sol3 in Do
+maggiore — non fra gli armonici alti: le tre voci stavano tutte fra 130 e
+200 Hz, e lì una terza è fangosa. È il vecchio limite di registro, intervalli
+stretti in alto e larghi in basso.
+
+Tre correzioni, misurate sulla sequenza intera a posizione perfetta:
+
+| | ruvidezza |
+|---|---|
+| prima | 1.563 |
+| voci superiori da Do3 a **Do4** | −51% |
+| armonici solo su **ottave e quinte** (1, 2, 3, 4, 6, 8, 12, 16) | −13% |
+| residuo di scordatura diviso per l'ordine del parziale | −2% |
+| **tutte insieme** | **0.537 (−66%)** |
+
+Gli armonici contano meno del registro ma non sono innocenti: il quinto
+armonico è una terza maggiore e il settimo una settima minore, e impongono un
+colore all'accordo *qualunque colore avesse* — in Si minore il quinto armonico
+del basso è un Re♯ che batte contro il Re della terza. Ottave e quinte non
+prendono posizione, quindi la qualità resta quella scritta nell'asana. E i tre
+centesimi di tono di scordatura residua sono un luccichio lento sulla
+fondamentale (0,2 Hz) ma otto battiti al secondo sul sedicesimo armonico:
+vanno divisi per l'ordine del parziale.
+
+**La sequenza di accordi non è cambiata**: C, G, Dsus2, Asus2, Esus2, Bm, F♯m…
+È rimasta quella, perché il problema non era lì.
 
 Anche il **bagliore** segue l'accordo, invece di restare sempre acceso. La
 forza del bloom cresce con le note che stanno suonando davvero — con una
@@ -130,9 +175,10 @@ js/
 tools/
   serve.py              server locale + ponte verso il telefono
   prova-turn.py         chiede al TURN di assegnare un relay: credenziali buone?
-  apri-firewall.ps1     apre la porta 8941 verso la rete locale, una volta sola
+  apri-firewall.cmd     apre la porta 8941 verso la rete locale, una volta sola
   build_asanas.py       genera data/asanas.json dagli angoli delle pose
   banco-logica.html     accordi, ordine delle note, punteggi delle rette
+  banco-pose.html       disegna tutte le pose: pavimento, rette, scheletro
   banco-avatar.html     quanto l'avatar cade vicino ai giunti dell'asana
   banco-intro.html      rende l'animazione iniziale in una striscia di istanti
   banco-schermo.html    disegna una posa finta come la vedrebbe il telefono
@@ -167,6 +213,17 @@ cartella yoga. L'IK serve quando si conosce solo il punto d'arrivo e bisogna
 indovinare le articolazioni in mezzo; qui i dati dell'asana danno ogni
 giunto, gomiti e ginocchia comprese, quindi ogni osso si punta direttamente
 dove l'asana lo vuole.
+
+Attenzione a cosa dimostra quella misura. L'avatar segue i dati con scarti
+sotto l'uno per cento **anche quando i dati sono sbagliati**: in Uttanasana il
+polso finiva tre centesimi sotto il pavimento e la mano sporgeva in
+orizzontale davanti ai piedi, e lo scarto avatar‑dati restava 0.000. Nessun
+confronto avatar‑contro‑dati può accorgersene. Per questo ogni posa dichiara
+`ground`, cioè quali giunti poggiano a terra, e
+[`tools/banco-pose.html`](tools/banco-pose.html) disegna tutte le pose e
+verifica che gli appoggi siano alla stessa altezza e che niente finisca sotto
+il pavimento. È in 2D e non usa né three.js né l'FBX: controlla i dati, che
+sono il posto dove l'errore stava.
 
 Misurato su tutti e sette gli asana con `tools/banco-avatar.html`:
 

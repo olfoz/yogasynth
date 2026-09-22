@@ -32,8 +32,18 @@ const QUALITY = {
 // l'accordo verso l'acuto giro dopo giro: qui invece ogni voce ricade sempre
 // nella propria ottava, e l'accordo si muove per giro di basso restando
 // nello stesso registro (e' il "armonizzando" della progressione).
-const BASS_OCTAVE_MIDI = 36;    // Do2: la fondamentale, cioe' la spina dorsale
-const CHORD_OCTAVE_MIDI = 48;   // Do3: pavimento delle voci superiori
+const BASS_OCTAVE_MIDI = 36;    // Do2: la fondamentale, cioe' il basso
+// Do4, non Do3.
+//
+// Con le voci superiori appoggiate a Do3 l'accordo stava tutto fra 130 e
+// 200 Hz, e li' una terza e' fangosa: misurando la ruvidezza (Plomp-Levelt)
+// sulla sequenza intera, le coppie peggiori erano sempre fra le
+// FONDAMENTALI delle voci — Si2 contro Re3 in Si minore, Mi3 contro Sol3 in
+// Do maggiore — non fra gli armonici. E' il vecchio limite di registro: gli
+// intervalli stretti si tengono in alto, quelli larghi in basso. Alzandole
+// di un'ottava la ruvidezza scende del 51%, e l'accordo non suona vuoto
+// perche' e' il basso, con i suoi armonici, a riempire lo spazio in mezzo.
+const CHORD_OCTAVE_MIDI = 60;   // Do4: pavimento delle voci superiori
 
 export function noteToMidi(name) {
     const m = /^([A-G])([#b]?)(-?\d+)$/.exec(String(name).trim());

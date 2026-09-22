@@ -109,7 +109,7 @@ export class Schermo {
      * basta centro e direzione, la lunghezza se la calcola lui per far
      * uscire il raggio dallo schermo.
      */
-    static snapshot({ practice, res, uPts, fits, targetPts, aspect, progress, state, audio, maxHarmonics }) {
+    static snapshot({ practice, res, uPts, fits, targetPts, noteOf, aspect, progress, state, audio, maxHarmonics }) {
         // la posa guida e' ferma per tutto l'asana: si manda quando cambia
         // (compreso lo specchio, che la ribalta) e ogni tanto per chi arriva
         const chiave = (practice.current ? practice.current.id : '') + (res.mirrored ? '-m' : '');
@@ -136,7 +136,9 @@ export class Schermo {
             target: rimanda ? packTarget(targetPts) : undefined,
             rays: practice.rays.map((ray, i) => {
                 const fit = fits[i];
-                const note = practice.noteFor(i);
+                // quale altezza tocca a questa retta lo decide l'ordine di
+                // arrivo, non la parte del corpo (js/music/voiceOrder.js)
+                const note = noteOf ? noteOf(i) : practice.noteFor(i);
                 return {
                     id: ray.id,
                     label: ray.label,

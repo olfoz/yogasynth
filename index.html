@@ -115,6 +115,15 @@
             <select id="modeSelect"></select>
         </div>
         <div class="cam-row">
+            <label for="pauseSelect" title="E' dentro questa pausa che la voce annuncia il prossimo asana">&#9203; Pausa fra un asana e l'altro</label>
+            <select id="pauseSelect">
+                <option value="800">0,8 s &mdash; veloce</option>
+                <option value="1500" selected>1,5 s</option>
+                <option value="3000">3 s</option>
+                <option value="5000">5 s &mdash; con calma</option>
+            </select>
+        </div>
+        <div class="cam-row">
             <label for="cameraSelect">&#128247; Webcam</label>
             <select id="cameraSelect"><option value="">Predefinita</option></select>
             <button id="camRefresh" title="Rileva le webcam disponibili">&#128260;</button>

@@ -82,6 +82,9 @@
         "legs"
       ],
       "cue": "Una sola colonna: caviglie, bacino, spalle e testa sullo stesso raggio.",
+      "ground": [
+        "ankle"
+      ],
       "angles": {
         "spine": -90,
         "head": -86,
@@ -158,6 +161,9 @@
         "legs"
       ],
       "cue": "Le braccia prolungano la spina dorsale verso l'alto: un unico raggio dai talloni alle dita.",
+      "ground": [
+        "ankle"
+      ],
       "angles": {
         "spine": -92,
         "head": -84,
@@ -235,66 +241,70 @@
         "foreArms"
       ],
       "cue": "Gambe a piombo, busto che cade lungo il loro raggio. Le braccia sono piegate: due raggi distinti, quindi una quarta nota.",
+      "ground": [
+        "ankle",
+        "wrist"
+      ],
       "angles": {
         "spine": 85,
-        "head": 78,
-        "upperArm": 108,
-        "foreArm": 22,
+        "head": 88,
+        "upperArm": 133,
+        "foreArm": 21,
         "thigh": 90,
         "shin": 90
       },
       "landmarks": {
         "nose": [
-          0.5038,
-          0.6502
+          0.5315,
+          0.6667
         ],
         "lShoulder": [
-          0.4729,
-          0.5519
+          0.518,
+          0.5663
         ],
         "rShoulder": [
-          0.4929,
-          0.5519
+          0.538,
+          0.5663
         ],
         "lElbow": [
-          0.4353,
-          0.6678
+          0.4349,
+          0.6554
         ],
         "rElbow": [
-          0.4553,
-          0.6678
+          0.4549,
+          0.6554
         ],
         "lWrist": [
-          0.5447,
-          0.712
+          0.5451,
+          0.6977
         ],
         "rWrist": [
-          0.5647,
-          0.712
+          0.5651,
+          0.6977
         ],
         "lHip": [
-          0.4498,
-          0.288
+          0.4949,
+          0.3023
         ],
         "rHip": [
-          0.4698,
-          0.288
+          0.5149,
+          0.3023
         ],
         "lKnee": [
-          0.4498,
-          0.4908
+          0.4949,
+          0.5052
         ],
         "rKnee": [
-          0.4698,
-          0.4908
+          0.5149,
+          0.5052
         ],
         "lAnkle": [
-          0.4498,
-          0.6826
+          0.4949,
+          0.6969
         ],
         "rAnkle": [
-          0.4698,
-          0.6826
+          0.5149,
+          0.6969
         ]
       }
     },
@@ -311,6 +321,9 @@
         "legs"
       ],
       "cue": "Schiena piatta come un raggio orizzontale, perpendicolare al raggio delle gambe.",
+      "ground": [
+        "ankle"
+      ],
       "angles": {
         "spine": 2,
         "head": -8,
@@ -388,6 +401,9 @@
         "foreArms"
       ],
       "cue": "Dalla testa ai talloni un raggio solo. Gomiti a novanta gradi: avambracci a piombo, secondo raggio.",
+      "ground": [
+        "wrist"
+      ],
       "angles": {
         "spine": -8,
         "head": -8,
@@ -464,6 +480,10 @@
         "legs"
       ],
       "cue": "Braccia a piombo come colonne. Il busto sale in diagonale, le gambe scendono sulla diagonale opposta.",
+      "ground": [
+        "wrist",
+        "ankle"
+      ],
       "angles": {
         "spine": -30,
         "head": -18,
@@ -540,6 +560,10 @@
         "legs"
       ],
       "cue": "Braccia e schiena sullo stesso raggio, dalle mani al bacino. Le gambe aprono il secondo lato della V.",
+      "ground": [
+        "wrist",
+        "ankle"
+      ],
       "angles": {
         "spine": 42,
         "head": 42,
