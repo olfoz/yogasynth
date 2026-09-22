@@ -199,10 +199,10 @@
         .test(location.hostname);
     document.getElementById('panelHint').innerHTML = inLocale
         ? 'Sul computer: <b>python tools/serve.py</b>, apri '
-          + '<b>http://localhost:8941/</b>, premi INIZIA e accendi '
-          + "l'interruttore <b>Telefono</b>."
-        : 'Sul computer apri lo stesso sito, premi <b>INIZIA</b> e accendi '
-          + "l'interruttore <b>Telefono</b>: compare un QR da inquadrare.";
+          + '<b>http://localhost:8941/</b> e nella schermata iniziale premi '
+          + '<b>Collega un telefono</b>.'
+        : 'Sul computer apri lo stesso sito e, nella schermata iniziale, premi '
+          + '<b>Collega un telefono</b>: compare un QR da inquadrare.';
 
     // Server di appoggio per WebRTC: gli stessi che usa il computer.
     var ICE_MINIMO = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
@@ -301,8 +301,50 @@
      * nemmeno da dove arrivino.
      */
     var sorgente = null;
-
     var ultimoT = 0;
+
+    /*
+     * Due strade in corso insieme, un pannello solo.
+     *
+     * Prima vinceva chi scriveva per ultimo: il ponte falliva dopo qualche
+     * secondo e cancellava il messaggio del collegamento diretto, che magari
+     * stava andando benissimo. Si leggeva "Non trovo il computer" mentre il
+     * telefono era gia' collegato e aspettava soltanto che la pratica
+     * cominciasse. Adesso lo stato delle due strade si tiene separato e il
+     * pannello lo compone, con una precedenza chiara.
+     */
+    var statoDiretto = 'fermo';   // fermo | inCorso | aperto | fallito
+    var statoPonte = 'fermo';     // fermo | cerco | aperto | fallito
+    var motivoDiretto = '';
+    var motivoPonte = '';
+
+    function aggiornaPannello() {
+        if (sorgente) { hidePanel(); return; }          // arrivano gia' i dati
+
+        if (statoDiretto === 'aperto' || statoPonte === 'aperto') {
+            // collegati ma il computer non manda ancora niente: quasi sempre
+            // vuol dire che la pratica non e' ancora cominciata
+            showPanel('Collegato al computer. Premi INIZIA sul computer…');
+            return;
+        }
+        if (statoDiretto === 'inCorso') {
+            showPanel('Collegamento diretto in corso…');
+            return;
+        }
+        if (statoDiretto === 'fallito') {
+            chiediCodice('Collegamento diretto non riuscito.', motivoDiretto);
+            return;
+        }
+        if (statoPonte === 'cerco') {
+            showPanel('Cerco il computer sulla rete…', motivoPonte);
+            return;
+        }
+        if (statoPonte === 'fallito') {
+            chiediCodice('Non trovo il computer sulla rete locale.', motivoPonte);
+            return;
+        }
+        showPanel('Collegamento…');
+    }
 
     function accetta(data, via) {
         if (sorgente && sorgente !== via) { return; }   // il primo che arriva comanda
@@ -324,19 +366,20 @@
         fetch('live/ping', { cache: 'no-store' })
             .then(function (r) {
                 if (!r.ok) { throw new Error('HTTP ' + r.status); }
-                if (!sorgente) { showPanel('Collegato. In attesa che il computer trasmetta…'); }
+                statoPonte = 'aperto';
+                aggiornaPannello();
                 poll();
             })
             .catch(function (e) {
                 tries++;
-                var why = (e && e.message ? e.message : String(e));
-                if (sorgente) { return; }               // il diretto ce l'ha gia' fatta
+                motivoPonte = (e && e.message ? e.message : String(e));
                 if (tries < 2) {
-                    showPanel('Cerco il computer sulla rete… (' + tries + ')', why);
+                    statoPonte = 'cerco';
                     setTimeout(checkBridge, 2500);
                 } else {
-                    chiediCodice('Non trovo il computer sulla rete locale.', why);
+                    statoPonte = 'fallito';
                 }
+                aggiornaPannello();
             });
     }
 
@@ -363,7 +406,8 @@
     function collegaDiretto(codice) {
         codice = String(codice || '').trim().toLowerCase();
         if (!codice) { return; }
-        showPanel('Collegamento diretto a ' + codice + '…');
+        statoDiretto = 'inCorso';
+        aggiornaPannello();
 
         caricaPeerJS(function () {
           caricaIce().then(function (config) {
@@ -377,16 +421,20 @@
                     serialization: 'json'
                 });
                 conn.on('open', function () {
-                    showPanel('Collegato al computer. In attesa…');
+                    statoDiretto = 'aperto';
+                    aggiornaPannello();
                 });
                 conn.on('data', function (data) { accetta(data, 'diretto'); });
                 conn.on('close', function () {
-                    sorgente = null;
-                    chiediCodice('Il collegamento diretto è caduto.', 'riprova con il codice');
+                    if (sorgente === 'diretto') { sorgente = null; }
+                    statoDiretto = 'fallito';
+                    motivoDiretto = 'il collegamento e caduto: riprova con il codice';
+                    aggiornaPannello();
                 });
                 conn.on('error', function (err) {
-                    chiediCodice('Collegamento diretto non riuscito.',
-                        (err && err.message) || String(err));
+                    statoDiretto = 'fallito';
+                    motivoDiretto = (err && err.message) || String(err);
+                    aggiornaPannello();
                 });
             });
 
@@ -407,11 +455,15 @@
                 } else {
                     spiega = (err && err.message) || String(err);
                 }
-                chiediCodice('Collegamento diretto non riuscito.', spiega);
+                statoDiretto = 'fallito';
+                motivoDiretto = spiega;
+                aggiornaPannello();
             });
           });
         }, function (perche) {
-            chiediCodice('Collegamento diretto non disponibile.', perche);
+            statoDiretto = 'fallito';
+            motivoDiretto = perche;
+            aggiornaPannello();
         });
     }
 
