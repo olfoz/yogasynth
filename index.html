@@ -73,13 +73,6 @@
     <div class="status-bar" id="statusBar">In attesa&hellip;</div>
 
     <!-- Indirizzo da aprire sul telefono, mostrato quando si accende "Telefono" -->
-    <div class="cast-card hidden" id="castCard">
-        <div class="cast-title">&#128241; Apri sul telefono</div>
-        <div class="cast-qr" id="castQr"></div>
-        <code id="castUrl">&hellip;</code>
-        <div class="cast-note" id="castNote"></div>
-        <div class="cast-note" id="castPeer">&nbsp;</div>
-    </div>
     </div>
 
     <div class="loading-container" id="loadingContainer">
@@ -124,6 +117,23 @@
             <select id="cameraSelect"><option value="">Predefinita</option></select>
             <button id="camRefresh" title="Rileva le webcam disponibili">&#128260;</button>
         </div>
+        <div class="cam-row">
+            <label>&#128241; Secondo schermo</label>
+            <button id="pairButton" class="pair-button">Collega un telefono</button>
+        </div>
+
+        <!-- La scheda del telefono nasce QUI, nella schermata iniziale: si
+             collega il telefono, lo si appoggia davanti a se', e solo dopo
+             si comincia. All'avvio della pratica viene spostata fuori dal
+             popup e diventa la scheda fissa in basso a destra. -->
+        <div class="cast-card in-popup hidden" id="castCard">
+            <div class="cast-title">&#128241; Apri sul telefono</div>
+            <div class="cast-qr" id="castQr"></div>
+            <code id="castUrl">&hellip;</code>
+            <div class="cast-note" id="castNote"></div>
+            <div class="cast-note" id="castPeer">&nbsp;</div>
+        </div>
+
         <div class="start-btn-row">
             <button class="load-button" id="startButton">&#9654; INIZIA</button>
         </div>

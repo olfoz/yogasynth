@@ -432,11 +432,12 @@ async function start() {
     stage = new Stage(stageEl, video);
     resizeAll();
     setupManualZoom(stageEl);
-    schermo = new Schermo();
-    peer = new PeerHost((testo, dettaglio) => {
-        const el2 = el('castPeer');
-        if (el2) el2.textContent = dettaglio ? testo + ' — ' + dettaglio : testo;
-    });
+    // la scheda del telefono lascia il popup e diventa quella fissa in basso
+    const scheda = el('castCard');
+    if (scheda && scheda.parentElement !== document.body) {
+        document.body.appendChild(scheda);
+        scheda.classList.remove('in-popup');
+    }
     video.addEventListener('loadedmetadata', resizeAll);
     window.addEventListener('resize', resizeAll);
 
@@ -678,6 +679,14 @@ function fillIntroText() {
     }
     buildModeSelect();
     fillIntroText();
+
+    // Esistono gia' prima di INIZIA: il telefono si collega dalla schermata
+    // iniziale. Nessuno dei due contatta la rete finche' non lo si accende.
+    schermo = new Schermo();
+    peer = new PeerHost((testo, dettaglio) => {
+        const nota = el('castPeer');
+        if (nota) nota.textContent = dettaglio ? testo + ' — ' + dettaglio : testo;
+    });
     PoseTracker.listCameras(el('cameraSelect'), false);
     el('camRefresh').addEventListener('click', () => PoseTracker.listCameras(el('cameraSelect'), true));
     el('startButton').addEventListener('click', start);
@@ -693,6 +702,26 @@ function fillIntroText() {
         if (v) targetZoom = 1;   // riparte dall'inquadratura larga e si richiude da se'
     });
     setupToggle('castToggle', 'castCheckbox', v => toggleSchermo(v));
+
+    // Collegamento al telefono PRIMA di cominciare: si inquadra il QR, si
+    // appoggia il telefono davanti a se', e solo dopo si preme INIZIA. Non
+    // parte da solo perche' PeerJS sono novanta chilobyte e un giro sul
+    // servizio di incontro: chi non usa il secondo schermo non li paga.
+    el('pairButton').addEventListener('click', async () => {
+        const b = el('pairButton');
+        b.disabled = true;
+        b.textContent = 'collegamento…';
+        el('castCheckbox').checked = true;
+        el('castToggle').classList.add('active');
+        await toggleSchermo(true);
+        b.textContent = 'Telefono collegato? Premi INIZIA';
+        // il popup e' piu' alto dello schermo: senza questo il QR compare
+        // sotto la piega e sembra che il pulsante non abbia fatto niente
+        const card = el('castCard');
+        if (card && card.scrollIntoView) {
+            card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+    });
     setupToggle('bodyToggle', 'bodyCheckbox', v => showBody = v);
     setupToggle('raysToggle', 'raysCheckbox', v => showRays = v);
 })();

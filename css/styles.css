@@ -189,6 +189,28 @@ body {
     max-width: min(84vw, 360px);
 }
 .cast-card.hidden { display: none; }
+
+/* Dentro il popup non e' una scheda fissa ma una parte del modulo. */
+.cast-card.in-popup {
+    position: static;
+    max-width: none;
+    margin: 4px 0 14px;
+}
+.cast-card.in-popup .cast-qr { width: 200px; }
+
+.pair-button {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid rgba(124, 77, 255, 0.55);
+    background: rgba(124, 77, 255, 0.14);
+    color: #e9ecf5;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.pair-button:hover { background: rgba(124, 77, 255, 0.26); }
+.pair-button[disabled] { opacity: 0.6; cursor: default; }
 .cast-title { font-size: 12px; font-weight: 600; margin-bottom: 6px; }
 .cast-card code {
     display: block;

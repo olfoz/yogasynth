@@ -266,9 +266,15 @@ La webcam deve stare lontana per prendere tutto il corpo; lo schermo vicino
 per poterlo leggere. Sono due posti diversi, quindi servono due dispositivi:
 il computer inquadra, il telefono lo appoggi davanti a te e guarda.
 
-1. sul computer apri l'app, premi INIZIA e accendi l'interruttore
-   **Telefono**: compare un QR e un indirizzo;
-2. sul telefono inquadra il QR, oppure scrivi l'indirizzo.
+1. sul computer apri l'app e, **nella schermata iniziale**, premi
+   *Collega un telefono*: compaiono un QR e un indirizzo;
+2. sul telefono inquadra il QR, oppure scrivi l'indirizzo;
+3. appoggia il telefono davanti a te e **solo adesso** premi INIZIA.
+
+Il collegamento si fa prima di cominciare proprio per questo: si sistema il
+telefono con calma, senza la pratica gia' avviata. Durante la sessione la
+scheda si sposta in basso a destra e l'interruttore **Telefono** la
+accende e la spegne.
 
 Al telefono serve **una cosa sola**: un indirizzo che contenga gia' il
 codice, tipo `.../schermo.html#orso-7133`. Da li' si collega da solo per la
