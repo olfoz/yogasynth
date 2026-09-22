@@ -150,6 +150,19 @@ body {
 }
 
 .toggle-container { display: flex; align-items: center; gap: 7px; }
+
+.restart-button {
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    background: rgba(255, 255, 255, 0.06);
+    color: #e9ecf5;
+    border-radius: 8px;
+    padding: 5px 11px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.restart-button:hover { border-color: #7C4DFF; background: rgba(124, 77, 255, 0.18); }
 .toggle-label { font-size: 12px; color: #aab2c8; user-select: none; }
 
 .toggle-switch {

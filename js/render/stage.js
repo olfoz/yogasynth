@@ -26,6 +26,16 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 // fotogramma ha i pixel che ha, lo zoom e' digitale.
 export const MAX_ZOOM = 3.2;
 
+// Il bagliore non e' una decorazione sempre accesa: e' il premio
+// dell'accordo. Con una nota sola si intuisce appena, cresce via via che
+// le altre rette si agganciano, ed e' pieno quando l'accordo e' completo.
+// La curva e' piu' che lineare apposta: a meta' delle note il bagliore
+// deve essere ancora chiaramente parziale, non meta' strada.
+const GLOW_MIN = 0.10;
+const GLOW_MAX = 1.1;
+const GLOW_CURVE = 1.5;
+const GLOW_SMOOTH_S = 0.30;
+
 export class Stage {
     constructor(container, video) {
         this.container = container;
@@ -54,7 +64,8 @@ export class Stage {
 
         this.composer = new EffectComposer(this.renderer);
         this.composer.addPass(new RenderPass(this.scene, this.camera));
-        this.bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), 1.1, 0.7, 0.18);
+        this.bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), GLOW_MAX, 0.7, 0.18);
+        this.glow = 1;          // 0..1 smussato, vedi setGlow()
         this.composer.addPass(this.bloom);
 
         this.scene.add(new THREE.AmbientLight(0xffffff, 0.75));
@@ -103,6 +114,18 @@ export class Stage {
     }
 
     /** Ridimensiona canvas e frustum sulle dimensioni correnti di schermo e video. */
+    /**
+     * Quanta parte dell'accordo suona, 0..1: e' questo a decidere il glow.
+     * @param {number} frazione  note accese / note dell'accordo
+     * @param {number} dt        secondi dall'ultimo fotogramma
+     */
+    setGlow(frazione, dt) {
+        const target = Math.max(0, Math.min(1, frazione || 0));
+        const k = 1 - Math.exp(-(dt || 0.016) / GLOW_SMOOTH_S);
+        this.glow += (target - this.glow) * k;
+        this.bloom.strength = GLOW_MIN + (GLOW_MAX - GLOW_MIN) * Math.pow(this.glow, GLOW_CURVE);
+    }
+
     resize() {
         const vw = (this.video && this.video.videoWidth) || 4;
         const vh = (this.video && this.video.videoHeight) || 3;

@@ -18,6 +18,7 @@
 import { UnityAnimParser } from './vendor/unityAnimParser.js';
 import { AnimationPlayer } from './vendor/animationPlayer.js';
 import { PoseClip } from './poseClip.js';
+import { GUIDE_OPACITY } from './render/avatar.js';
 
 const FADE_OUT_MS = 900;
 
@@ -30,7 +31,7 @@ export class Intro {
         this.avatar = avatar;
         this.url = opts.url || './intro/intro.anim';
         this.clipUrl = opts.clipUrl || './data/intro-sukhasana.json';
-        this.baseOpacity = opts.baseOpacity !== undefined ? opts.baseOpacity : 0.5;
+        this.baseOpacity = opts.baseOpacity !== undefined ? opts.baseOpacity : GUIDE_OPACITY;
         this.stage = opts.stage || null;
 
         this.state = 'idle';   // idle | playing | fading | done

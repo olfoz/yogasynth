@@ -35,6 +35,18 @@ Quando tutte le rette tengono insieme per 6 secondi l'asana è superato.
 Se non ci riesci entro 30 secondi si passa avanti con una campana e la voce
 che annuncia il prossimo.
 
+Anche il **bagliore** segue l'accordo, invece di restare sempre acceso. La
+forza del bloom cresce con le note che stanno suonando davvero — con una
+nota sola si intuisce appena, con l'accordo completo la scena si accende
+(`setGlow` in `js/render/stage.js`). La curva è più che lineare apposta: a
+metà delle note il bagliore deve ancora essere chiaramente parziale, o il
+premio dell'accordo completo non si distinguerebbe.
+
+Il pulsante **Ricomincia**, in basso, riporta la sequenza a Tadasana e il
+basso alla tonalità di partenza. Non ricarica la pagina apposta: webcam,
+avatar e soprattutto il telefono collegato restano dove sono, e non c'è da
+rifare il QR a ogni giro.
+
 ## La progressione
 
 Il basso segue il **circolo delle quinte** e avanza di una quinta a **ogni
@@ -201,9 +213,10 @@ arretrare ancora. Adesso a zoom 1 si vede sempre tutto il fotogramma.
 stringe attorno al corpo, che occupa sempre circa l'82% dello schermo
 qualunque sia la distanza (`updateView` in `js/main.js`). E' ingrandimento
 digitale — l'immagine perde definizione — ma corpo, raggi e avatar diventano
-leggibili. L'interruttore **Zoom auto** lo disattiva; rotella e pizzico
-regolano lo zoom a mano (e spengono l'automatico). La messa a fuoco segue il
-corpo in ogni caso.
+leggibili. Di serie e' **spento**: a chi e' gia' inquadrato bene la scena
+sembrerebbe muoversi da sola, senza ricavarne niente. Lo accende
+l'interruttore **Zoom auto**; rotella e pizzico regolano lo zoom a mano (e
+spengono l'automatico). La messa a fuoco segue il corpo in ogni caso.
 
 **4. Arti fuori bordo tollerati.** Prima un giunto non visto azzerava la sua
 retta, quindi bastava un piede oltre il bordo per non poter piu' suonare

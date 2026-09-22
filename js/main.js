@@ -77,7 +77,10 @@ let completed = 0;
 let lastFrame = 0;
 
 // vista: zoom e messa a fuoco, smussati
-let autoZoom = true;
+// Spento di serie: l'inquadratura che insegue il corpo aiuta chi sta
+// lontano, ma a chi e' gia' inquadrato bene da' solo l'impressione che
+// la scena si muova da sola. Si accende dall'interruttore.
+let autoZoom = false;
 let viewZoom = 1, targetZoom = 1;
 let viewFocus = null, targetFocus = null;
 
@@ -320,6 +323,10 @@ function loop(now) {
         height: stage.camera.top - stage.camera.bottom
     };
 
+    // il bagliore segue l'accordo: quante note stanno suonando davvero
+    const accese = res.active.reduce((n, a) => n + (a ? 1 : 0), 0);
+    stage.setGlow(practice.rays.length ? accese / practice.rays.length : 0, dt);
+
     raysView.visible = showRays;
     if (showRays) raysView.update(fits, res.scores, res.active, bounds, time, dt);
 
@@ -387,6 +394,26 @@ function loop(now) {
 function startPractice() {
     goToNextAsana(false);
     asanaChangedAt = performance.now();
+}
+
+/**
+ * Riparte da capo senza smontare niente.
+ *
+ * Ricaricare la pagina sarebbe equivalente per la pratica, ma butterebbe
+ * via webcam, avatar e soprattutto il collegamento col telefono, che
+ * andrebbe rifatto col QR ogni volta. Qui si azzerano solo i contatori:
+ * telefono, ponte e modello restano dove sono.
+ */
+function ricomincia() {
+    if (!running || !practice) return;
+    practice.reset();
+    completed = 0;
+    doneUntil = 0;
+    holdStart = 0;
+    state = 'matching';
+    if (tracker) tracker.reset();
+    startPractice();
+    hud.setStatus('Si ricomincia da ' + practice.current.name + '.');
 }
 
 // ─── AVVIO ───────────────────────────────────────────────────────────────
@@ -724,4 +751,5 @@ function fillIntroText() {
     });
     setupToggle('bodyToggle', 'bodyCheckbox', v => showBody = v);
     setupToggle('raysToggle', 'raysCheckbox', v => showRays = v);
+    el('restartButton').addEventListener('click', ricomincia);
 })();

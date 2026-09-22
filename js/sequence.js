@@ -47,6 +47,23 @@ export class Practice {
         this.targetPtsMirror = null;
     }
 
+    /**
+     * Riporta la pratica al primo passo, come appena costruita.
+     *
+     * Azzera anche changeCount, quindi il giro di basso riparte dalla
+     * fondamentale della sequenza: "ricomincia" deve voler dire davvero
+     * daccapo, non riprendere il circolo delle quinte da dove era.
+     */
+    reset() {
+        this.stepIndex = -1;
+        this.changeCount = -1;
+        this.current = null;
+        this.rays = [];
+        this.chord = null;
+        this.targetPts = null;
+        this.targetPtsMirror = null;
+    }
+
     get steps() {
         const seq = this.sequences[this.sequenceId];
         return (seq && seq.steps && seq.steps.length) ? seq.steps : null;

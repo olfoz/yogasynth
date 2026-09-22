@@ -29,6 +29,16 @@ try{
   for(let i=0;i<13;i++){p.advance();rows.push((i+1)+' '+p.current.name+' -> '+p.chord.symbol+' ['+p.chord.notes.map(n=>n.name).join(' ')+'] rette='+p.rays.map(r=>r.id).join(','));}
   log.push(rows.join('\n'));
 
+  // "ricomincia": deve tornare al primo passo E alla tonalita' di partenza,
+  // non riprendere il circolo delle quinte da dove era arrivato
+  const pr = new S.Practice(data,{mode:'sequence',sequenceId:'surya-namaskara-a'});
+  pr.advance(); const primo = pr.current.id + ' ' + pr.chord.symbol;
+  for(let i=0;i<5;i++) pr.advance();
+  pr.reset(); pr.advance();
+  const dopo = pr.current.id + ' ' + pr.chord.symbol;
+  if(dopo===primo) ok('reset() riparte da '+primo);
+  else bad('reset(): mi aspettavo '+primo+', ho avuto '+dopo);
+
   // ordine note: spina, arti sup, arti inf, extra
   p.stepIndex=-1;p.changeCount=-1;p.advance();
   if(p.rays[0].id==='spine') ok('1a nota = spina dorsale'); else bad('1a nota = '+p.rays[0].id);

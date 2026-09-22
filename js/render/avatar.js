@@ -38,6 +38,47 @@ import { setupIK } from '../vendor/ikSetup.js';
 
 const UP = new THREE.Vector3(0, 1, 0);
 
+/**
+ * Quanto e' opaco l'avatar guida.
+ *
+ * Era 0.5, e su uno sfondo affollato — l'immagine della webcam, i raggi
+ * colorati, il proprio corpo luminoso sopra — spariva: non si capiva piu'
+ * quale fosse la posa da imitare. Deve restare trasparente, perche' e' un
+ * suggerimento e non un personaggio, ma abbastanza da leggersi.
+ */
+export const GUIDE_OPACITY = 0.82;
+
+/**
+ * Aggiunge un bordo di luce lungo la sagoma.
+ *
+ * Alzare opacita' e emissione schiarisce l'avatar ma non lo separa dallo
+ * sfondo: chiaro su chiaro resta illeggibile. Il contorno invece segue il
+ * profilo del corpo, che e' proprio l'informazione che serve per copiare
+ * la posa, e si vede su qualsiasi fondo.
+ *
+ * Il termine e' di Fresnel: massimo dove la normale e' perpendicolare
+ * allo sguardo, cioe' sui bordi. Si inietta dopo <emissivemap_fragment>,
+ * dove `normal` (in spazio vista) esiste gia' ed e' ancora in tempo per
+ * entrare nell'emissione.
+ */
+function addRimLight(mat) {
+    mat.onBeforeCompile = shader => {
+        // il chunk incluso finisce con #endif: il codice aggiunto deve
+        // andare a capo, o finirebbe sulla riga della direttiva
+        const rim = `
+            float rim = 1.0 - abs(dot(normalize(normal), vec3(0.0, 0.0, 1.0)));
+            totalEmissiveRadiance += vec3(0.55, 0.75, 1.0) * pow(rim, 2.4) * 2.6;
+        `;
+        shader.fragmentShader = shader.fragmentShader.replace(
+            '#include <emissivemap_fragment>',
+            '#include <emissivemap_fragment>' + rim
+        );
+    };
+    // due materiali con lo stesso programma ma iniezioni diverse
+    // andrebbero a sbattere nella cache delle shader: la chiave li separa
+    mat.customProgramCacheKey = () => 'guida-rim';
+}
+
 // Nomi dei versori usati dalla minianimazione iniziale, per catena.
 const DIRECTION_KEYS = {
     leftArm: ['upperArmL', 'foreArmL'],
@@ -155,17 +196,21 @@ export class GuideAvatar {
     /** Materiale "guida": corpo di luce semitrasparente, non un personaggio solido. */
     _makeGhostMaterial(mesh) {
         const src = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-        const made = src.map(m => new THREE.MeshStandardMaterial({
-            color: new THREE.Color(0x9fb8ff),
-            emissive: new THREE.Color(0x3a5bd9),
-            emissiveIntensity: 0.9,
-            metalness: 0.1,
-            roughness: 0.6,
-            transparent: true,
-            opacity: 0.5,
-            depthWrite: false,
-            map: m && m.map ? m.map : null
-        }));
+        const made = src.map(m => {
+            const mat = new THREE.MeshStandardMaterial({
+                color: new THREE.Color(0xbcd0ff),
+                emissive: new THREE.Color(0x4f7dff),
+                emissiveIntensity: 1.1,
+                metalness: 0.1,
+                roughness: 0.6,
+                transparent: true,
+                opacity: GUIDE_OPACITY,
+                depthWrite: false,
+                map: m && m.map ? m.map : null
+            });
+            addRimLight(mat);
+            return mat;
+        });
         mesh.material = Array.isArray(mesh.material) ? made : made[0];
         mesh.renderOrder = 2;
         mesh.frustumCulled = false;
