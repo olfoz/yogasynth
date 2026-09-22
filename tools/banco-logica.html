@@ -82,6 +82,44 @@ try{
     else bad('guida fuori posto di ' + peggio.toFixed(4) + ' su ' + dove);
   }
 
+  // Il verso di profilo si sceglie una volta e non cambia piu'. Si prova
+  // con l'asana vero: si mette davanti un corpo SPECCHIATO, si controlla
+  // che il tracker se ne accorga e si blocchi, e poi gli si passa un corpo
+  // dritto per vedere che NON ci ricaschi.
+  const pm = new S.Practice(data, { mode: 'sequence', sequenceId: 'surya-namaskara-a' });
+  for (let i = 0; i < 3; i++) pm.advance();       // Uttanasana: ha un verso
+  const specchia = P => {
+    const q = {};
+    for (const k in P) q[k] = { x: 1.3333 - P[k].x, y: P[k].y, conf: 1 };
+    return q;
+  };
+  const daPunti = P => {
+    const q = {};
+    for (const k in P) q[k] = { x: P[k].x, y: P[k].y, conf: 1 };
+    return R.addMidpoints(q);
+  };
+  const tr = new R.RayTracker();
+  tr.setRays(pm.rays);
+  const corpoSpecchiato = daPunti(specchia(pm.targetPts));
+  let r;
+  for (let i = 0; i < 40; i++) r = tr.update(corpoSpecchiato, pm.targetPts, pm.targetPtsMirror);
+  if (r.mirrored && r.mirrorLocked) ok('il verso si riconosce e si blocca');
+  else bad('verso=' + r.mirrored + ' bloccato=' + r.mirrorLocked);
+
+  const versoPrima = tr.mirrored;
+  const corpoDritto = daPunti(pm.targetPts);
+  for (let i = 0; i < 60; i++) r = tr.update(corpoDritto, pm.targetPts, pm.targetPtsMirror);
+  if (r.mirrored === versoPrima) ok('una volta bloccato, il bersaglio non si ribalta piu’');
+  else bad('il verso e’ cambiato da ' + versoPrima + ' a ' + r.mirrored);
+
+  tr.setRays(pm.rays);                             // cambio di asana
+  if (tr.mirrored === versoPrima && tr.mirrorLocked) ok('il cambio di asana non azzera il verso');
+  else bad('dopo setRays: verso=' + tr.mirrored + ' bloccato=' + tr.mirrorLocked);
+
+  tr.reset();                                      // "ricomincia"
+  if (tr.mirrored === versoPrima && tr.mirrorLocked) ok('nemmeno "ricomincia" rigira la persona');
+  else bad('dopo reset: verso=' + tr.mirrored + ' bloccato=' + tr.mirrorLocked);
+
   // L'ordine delle note: la prima retta che va in posizione prende sempre
   // l'altezza piu' grave, qualunque parte del corpo sia.
   const V = await import('../js/music/voiceOrder.js');

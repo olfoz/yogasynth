@@ -279,13 +279,31 @@ export function rayScore(ray, uPts, tPts) {
     };
 }
 
+// Quanto deve staccare una delle due ipotesi (dritta o specchiata) perche'
+// il confronto conti come prova, e per quanti fotogrammi deve ripetersi
+// prima di diventare definitiva. Quindici fotogrammi sono circa mezzo
+// secondo: il tempo di escludere un'inquadratura presa a meta' di un giro.
+const MIRROR_MARGIN = 0.15;
+const MIRROR_FRAMES = 15;
+
 /**
  * Smussa i punteggi nel tempo, decide l'isteresi acceso/spento e sceglie da
- * solo se l'asana va confrontato dritto o specchiato (l'utente puo' mettersi
- * di profilo rivolto da una parte o dall'altra).
+ * che parte e' rivolta la persona — una volta sola, all'inizio, e poi non
+ * cambia piu' (vedi il costruttore).
  */
 export class RayTracker {
     constructor() {
+        // Il verso e' della persona, non dell'asana: si sceglie una volta e
+        // poi si blocca. Prima veniva riconsiderato a ogni fotogramma e
+        // azzerato a ogni cambio di asana, quindi il bersaglio poteva
+        // ribaltarsi da destra a sinistra in mezzo alla pratica — e chi la
+        // sta facendo si ritrova la posa da imitare girata dall'altra parte.
+        // Le pose simmetriche (Tadasana) non danno scarto fra dritto e
+        // specchiato: e' giusto che non decidano niente, decide la prima
+        // posa che ha un verso.
+        this.mirrored = false;
+        this.mirrorVotes = 0;
+        this.mirrorLocked = false;
         this.setRays([]);
     }
 
@@ -293,12 +311,13 @@ export class RayTracker {
         this.rays = rays;
         this.smooth = rays.map(() => 0);
         this.active = rays.map(() => false);
-        this.mirrored = false;
     }
 
     reset() {
         this.smooth = this.rays.map(() => 0);
         this.active = this.rays.map(() => false);
+        // il verso resta quello: "ricomincia" rifa' la sequenza, non rigira
+        // la persona. Per riconsiderarlo si ricarica la pagina.
     }
 
     update(uPts, tPts, tPtsMirror) {
@@ -309,11 +328,25 @@ export class RayTracker {
         if (uPts && n) {
             const dir = this.rays.map(r => rayScore(r, uPts, tPts));
             const mir = this.rays.map(r => rayScore(r, uPts, tPtsMirror));
-            const totD = dir.reduce((s, r) => s + r.score, 0);
-            const totM = mir.reduce((s, r) => s + r.score, 0);
-            // isteresi anche sullo specchio, altrimenti sfarfalla di continuo
-            if (this.mirrored && totD > totM + 0.15) this.mirrored = false;
-            if (!this.mirrored && totM > totD + 0.15) this.mirrored = true;
+            if (!this.mirrorLocked) {
+                const totD = dir.reduce((s, r) => s + r.score, 0);
+                const totM = mir.reduce((s, r) => s + r.score, 0);
+                // solo uno scarto netto conta come prova; sotto, la posa non
+                // sta dicendo niente sul verso
+                const scelto = totM > totD + MIRROR_MARGIN ? true
+                             : totD > totM + MIRROR_MARGIN ? false
+                             : null;
+                if (scelto === null) {
+                    this.mirrorVotes = 0;
+                } else if (scelto === this.mirrored) {
+                    // la stessa risposta per mezzo secondo: non e' un
+                    // fotogramma preso mentre la persona si sta girando
+                    if (++this.mirrorVotes >= MIRROR_FRAMES) this.mirrorLocked = true;
+                } else {
+                    this.mirrored = scelto;
+                    this.mirrorVotes = 1;
+                }
+            }
             details = this.mirrored ? mir : dir;
             raw = details.map(d => d.score);
         }
@@ -329,6 +362,7 @@ export class RayTracker {
             scores: this.smooth,
             active: this.active,
             mirrored: this.mirrored,
+            mirrorLocked: this.mirrorLocked,
             details,
             coverage: details.map(d => (d ? d.coverage : 0))
         };

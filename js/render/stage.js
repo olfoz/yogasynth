@@ -32,7 +32,9 @@ export const MAX_ZOOM = 3.2;
 // La curva e' piu' che lineare apposta: a meta' delle note il bagliore
 // deve essere ancora chiaramente parziale, non meta' strada.
 const GLOW_MIN = 0.10;
-const GLOW_MAX = 1.1;
+// 0.7, non 1.1: ad accordo completo il bagliore mangiava la scena, e quello
+// che si deve vedere sotto e' il corpo, non l'alone.
+const GLOW_MAX = 0.7;
 const GLOW_CURVE = 1.5;
 const GLOW_SMOOTH_S = 0.30;
 

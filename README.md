@@ -91,11 +91,12 @@ vanno divisi per l'ordine del parziale.
 È rimasta quella, perché il problema non era lì.
 
 Anche il **bagliore** segue l'accordo, invece di restare sempre acceso. La
-forza del bloom cresce con le note che stanno suonando davvero — con una
-nota sola si intuisce appena, con l'accordo completo la scena si accende
-(`setGlow` in `js/render/stage.js`). La curva è più che lineare apposta: a
-metà delle note il bagliore deve ancora essere chiaramente parziale, o il
-premio dell'accordo completo non si distinguerebbe.
+forza del bloom cresce con le note che stanno suonando davvero (`setGlow` in
+`js/render/stage.js`): 0 note → 0.10, una → 0.22, due → 0.43, l'accordo
+completo → **0.70**. La curva è più che lineare apposta, così a metà delle
+note il bagliore è ancora chiaramente parziale; e il massimo si ferma a 0.7
+perché più in su l'alone si mangiava la scena, mentre quello che si deve
+vedere sotto è il corpo.
 
 Il pulsante **Ricomincia**, in basso, riporta la sequenza a Tadasana e il
 basso alla tonalità di partenza. Non ricarica la pagina apposta: webcam,
@@ -394,6 +395,22 @@ webcam). Senza la webcam sotto, arti dello stesso colore dei raggi si
 confondevano con i raggi stessi; bianco sopra colorato si legge a colpo
 d'occhio: il corpo e' dentro il fascio, oppure no. L'inquadratura si stringe
 sul corpo come fa il computer, con lo stesso tetto di ingrandimento.
+
+### Da che parte sei rivolto
+
+Di profilo ci si può mettere rivolti a destra o a sinistra, e l'app confronta
+la posa con il bersaglio dritto o specchiato scegliendo quello che va meglio.
+Quella scelta però si fa **una volta sola** e poi si blocca (`RayTracker` in
+[`js/pose/rays.js`](js/pose/rays.js)): prima veniva riconsiderata a ogni
+fotogramma e azzerata a ogni cambio di asana, così a metà della pratica il
+bersaglio poteva ribaltarsi e ci si ritrovava la posa da imitare girata
+dall'altra parte.
+
+Serve uno scarto netto fra le due ipotesi, ripetuto per mezzo secondo: le
+pose simmetriche come Tadasana non dicono niente sul verso ed è giusto che
+non decidano, decide la prima posa che un verso ce l'ha. Nemmeno
+**Ricomincia** lo rimette in discussione — rifà la sequenza, non rigira la
+persona. Per riconsiderarlo si ricarica la pagina.
 
 ### La posa da raggiungere
 
