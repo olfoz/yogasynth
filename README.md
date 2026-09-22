@@ -48,6 +48,16 @@ parla, e la pausa si sceglie nella schermata iniziale (0,8 / 1,5 / 3 / 5
 secondi) — chi conosce la sequenza la accorcia, chi vuole ascoltare con calma
 la allunga.
 
+### Come si pronuncia
+
+I nomi sono sanscriti e una voce italiana ci mette l'accento sulla penultima
+sillaba: dice *asàna* dove va *àsana*, cioè ta‑DA‑sa‑na e non ta‑da‑SA‑na.
+Ogni posa porta quindi un campo `spoken` con l'accento scritto
+(`Tadasana` → `Tadàsana`): è l'unica cosa che la sintesi vocale del browser
+capisce, perché SSML e i fonemi non sono affidabili nelle Web Speech API. Per
+lo stesso motivo la *c* di Chaturanga diventa `Cia`: in italiano *cha* si
+legge *ka*.
+
 ### Perché l'accordo non stona
 
 Con gli armonici al completo l'accordo diventava ruvido, e la causa non erano
@@ -213,6 +223,14 @@ cartella yoga. L'IK serve quando si conosce solo il punto d'arrivo e bisogna
 indovinare le articolazioni in mezzo; qui i dati dell'asana danno ogni
 giunto, gomiti e ginocchia comprese, quindi ogni osso si punta direttamente
 dove l'asana lo vuole.
+
+Un'asana non è solo geometricamente corretta: deve anche essere **fattibile**.
+Uttanasana nasceva con il busto a 5 gradi dalle gambe, cioè praticamente
+parallelo: un piegamento completo che non fa nessuno, e la nota della spina
+non si sarebbe accesa mai. Adesso resta un angolo di **26 gradi**. Si regola
+da `spine` in [`tools/build_asanas.py`](tools/build_asanas.py) — `head` gli
+sta due gradi dietro, perché il raggio della spina arriva fino al naso e deve
+restare dritto.
 
 Attenzione a cosa dimostra quella misura. L'avatar segue i dati con scarti
 sotto l'uno per cento **anche quando i dati sono sbagliati**: in Uttanasana il

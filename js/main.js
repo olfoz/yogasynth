@@ -187,9 +187,18 @@ function goToNextAsana(announce) {
  */
 function announceNext() {
     const p = practice.peek(false);
-    if (p && p.asana) speak(p.asana.name);
+    if (p && p.asana) speak(p.asana.spoken || p.asana.name);
 }
 
+/**
+ * Dice un nome ad alta voce.
+ *
+ * Gli arriva la forma accentata di data/asanas.json, non quella scritta: i
+ * nomi sono sanscriti e una voce italiana ci mette l'accento sulla penultima
+ * sillaba, dicendo "asana" invece di "asana". L'accento scritto e' l'unico
+ * modo che la sintesi vocale del browser capisce — SSML e i fonemi non sono
+ * affidabili nelle Web Speech API.
+ */
 function speak(name) {
     if (!name || !('speechSynthesis' in window)) return;
     try {

@@ -72,6 +72,7 @@
     {
       "id": "tadasana",
       "name": "Tadasana",
+      "spoken": "Tadàsana",
       "label": "Montagna",
       "view": "profile",
       "facing": "right",
@@ -151,6 +152,7 @@
     {
       "id": "urdhva-hastasana",
       "name": "Urdhva Hastasana",
+      "spoken": "Urdhva Hastàsana",
       "label": "Braccia al cielo",
       "view": "profile",
       "facing": "right",
@@ -230,6 +232,7 @@
     {
       "id": "uttanasana",
       "name": "Uttanasana",
+      "spoken": "Uttanàsana",
       "label": "Piegamento in avanti",
       "view": "profile",
       "facing": "right",
@@ -240,77 +243,78 @@
         "legs",
         "foreArms"
       ],
-      "cue": "Gambe a piombo, busto che cade lungo il loro raggio. Le braccia sono piegate: due raggi distinti, quindi una quarta nota.",
+      "cue": "Gambe a piombo. Il busto scende su un raggio suo, inclinato: non serve schiacciarlo sulle gambe. Le braccia sono piegate: due raggi distinti, quindi una quarta nota.",
       "ground": [
         "ankle",
         "wrist"
       ],
       "angles": {
-        "spine": 85,
-        "head": 88,
+        "spine": 64,
+        "head": 66,
         "upperArm": 133,
-        "foreArm": 21,
+        "foreArm": 35,
         "thigh": 90,
         "shin": 90
       },
       "landmarks": {
         "nose": [
-          0.5315,
-          0.6667
+          0.5785,
+          0.6324
         ],
         "lShoulder": [
-          0.518,
-          0.5663
+          0.5276,
+          0.5407
         ],
         "rShoulder": [
-          0.538,
-          0.5663
+          0.5476,
+          0.5407
         ],
         "lElbow": [
-          0.4349,
-          0.6554
+          0.4446,
+          0.6298
         ],
         "rElbow": [
-          0.4549,
-          0.6554
+          0.4646,
+          0.6298
         ],
         "lWrist": [
-          0.5451,
-          0.6977
+          0.5412,
+          0.6975
         ],
         "rWrist": [
-          0.5651,
-          0.6977
+          0.5612,
+          0.6975
         ],
         "lHip": [
-          0.4949,
-          0.3023
+          0.4115,
+          0.3025
         ],
         "rHip": [
-          0.5149,
-          0.3023
+          0.4315,
+          0.3025
         ],
         "lKnee": [
-          0.4949,
-          0.5052
+          0.4115,
+          0.5054
         ],
         "rKnee": [
-          0.5149,
-          0.5052
+          0.4315,
+          0.5054
         ],
         "lAnkle": [
-          0.4949,
-          0.6969
+          0.4115,
+          0.6971
         ],
         "rAnkle": [
-          0.5149,
-          0.6969
+          0.4315,
+          0.6971
         ]
       }
     },
     {
       "id": "ardha-uttanasana",
       "name": "Ardha Uttanasana",
+      "spoken": "Ardha Uttanàsana",
       "label": "Mezzo piegamento",
       "view": "profile",
       "facing": "right",
@@ -390,6 +394,7 @@
     {
       "id": "chaturanga-dandasana",
       "name": "Chaturanga Dandasana",
+      "spoken": "Ciaturanga Dandàsana",
       "label": "Bastone su quattro appoggi",
       "view": "profile",
       "facing": "right",
@@ -470,6 +475,7 @@
     {
       "id": "urdhva-mukha-svanasana",
       "name": "Urdhva Mukha Svanasana",
+      "spoken": "Urdhva Mukha Svanàsana",
       "label": "Cane a testa in su",
       "view": "profile",
       "facing": "right",
@@ -550,6 +556,7 @@
     {
       "id": "adho-mukha-svanasana",
       "name": "Adho Mukha Svanasana",
+      "spoken": "Adho Mukha Svanàsana",
       "label": "Cane a testa in giu'",
       "view": "profile",
       "facing": "right",

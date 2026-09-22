@@ -17,6 +17,13 @@ Angoli in gradi, misurati da +x (destra) con y verso il basso, come sullo
 schermo: -90 = verso l'alto, +90 = verso il basso, 0 = in avanti (il corpo
 guarda verso destra).
 
+Ogni posa dichiara anche 'spoken': come va DETTA. I nomi sono sanscriti, e
+una voce italiana ci mette l'accento sulla penultima sillaba: dice "asana"
+quando la a lunga di asana vuole l'accento, cioe' ta-DA-sa-na e non
+ta-da-SA-na. Scrivere l'accento (Tadasana -> Tadàsana) e' il modo che la
+sintesi vocale capisce. Per lo stesso motivo la c di Chaturanga diventa
+"Cia": in italiano "cha" si legge "ka".
+
 Ogni posa dichiara anche 'ground': quali giunti poggiano a terra. Non e'
 decorazione, e' il controllo che manca a tutto il resto. L'avatar segue i
 dati con scarti sotto l'uno per cento anche quando i dati sono sbagliati,
@@ -143,7 +150,7 @@ def build(pose):
 # ─── Surya Namaskara A, tutto di profilo, corpo rivolto a destra ─────────
 POSES = [
     {
-        'id': 'tadasana', 'name': 'Tadasana', 'label': 'Montagna',
+        'id': 'tadasana', 'name': 'Tadasana', 'spoken': 'Tadàsana', 'label': 'Montagna',
         'quality': 'major', 'rays': ['spine', 'arms', 'legs'],
         'cue': "Una sola colonna: caviglie, bacino, spalle e testa sullo stesso raggio.",
         # in piedi, braccia lungo i fianchi: tutto a piombo
@@ -152,7 +159,7 @@ POSES = [
                    'thigh': 90, 'shin': 90},
     },
     {
-        'id': 'urdhva-hastasana', 'name': 'Urdhva Hastasana', 'label': 'Braccia al cielo',
+        'id': 'urdhva-hastasana', 'name': 'Urdhva Hastasana', 'spoken': 'Urdhva Hastàsana', 'label': 'Braccia al cielo',
         'quality': 'major', 'rays': ['spine', 'arms', 'legs'],
         'cue': "Le braccia prolungano la spina dorsale verso l'alto: un unico raggio dai talloni alle dita.",
         # braccia sopra la testa, leggero slancio all'indietro
@@ -161,26 +168,31 @@ POSES = [
                    'thigh': 90, 'shin': 90},
     },
     {
-        'id': 'uttanasana', 'name': 'Uttanasana', 'label': 'Piegamento in avanti',
+        'id': 'uttanasana', 'name': 'Uttanasana', 'spoken': 'Uttanàsana', 'label': 'Piegamento in avanti',
         'quality': 'sus2', 'rays': ['spine', 'upperArms', 'legs', 'foreArms'],
-        'cue': "Gambe a piombo, busto che cade lungo il loro raggio. Le braccia sono piegate: due raggi distinti, quindi una quarta nota.",
-        # Busto rovesciato lungo le gambe, MANI A TERRA accanto ai piedi.
+        'cue': "Gambe a piombo. Il busto scende su un raggio suo, inclinato: non serve schiacciarlo sulle gambe. Le braccia sono piegate: due raggi distinti, quindi una quarta nota.",
+        # Busto in discesa sul raggio delle gambe, MANI A TERRA davanti ai
+        # piedi.
         #
-        # La spalla, a fine piegamento, sta solo 0.13 sopra il pavimento
-        # mentre il braccio intero ne misura 0.24: le mani arrivano a terra
-        # soltanto col gomito molto piegato, ed e' per questo che l'asana ha
-        # quattro rette invece di tre. Il gomito va indietro e l'avambraccio
-        # scende in avanti; la versione precedente aveva il braccio a 108, e
-        # il polso finiva tre centesimi SOTTO il pavimento e dieci in avanti,
-        # con la mano che sporgeva in orizzontale davanti ai piedi.
-        # La testa segue il busto (88 contro 85) invece di rialzarsi: cosi'
-        # il raggio della spina resta dritto fino al naso.
+        # Il busto NON si schiaccia sulle gambe: resta un angolo di 26 gradi
+        # (90 meno 64). Prima era a 5 gradi, cioe' praticamente parallelo
+        # alle gambe, e quel piegamento completo non lo fa nessuno: la nota
+        # della spina non si sarebbe accesa mai. Per rendere l'asana piu' o
+        # meno esigente si muove solo 'spine'; 'head' gli sta due gradi
+        # dietro, perche' il raggio della spina arriva fino al naso e deve
+        # restare dritto.
+        #
+        # Le braccia restano piegate, e non per scelta: a piegamento fatto la
+        # spalla sta 0.15 sopra il pavimento mentre il braccio intero ne
+        # misura 0.24, quindi la mano arriva a terra solo col gomito chiuso a
+        # una ottantina di gradi. E' per questo che l'asana ha quattro rette
+        # invece di tre.
         'ground': ['ankle', 'wrist'],
-        'angles': {'spine': 85, 'head': 88, 'upperArm': 133, 'foreArm': 21,
+        'angles': {'spine': 64, 'head': 66, 'upperArm': 133, 'foreArm': 35,
                    'thigh': 90, 'shin': 90},
     },
     {
-        'id': 'ardha-uttanasana', 'name': 'Ardha Uttanasana', 'label': 'Mezzo piegamento',
+        'id': 'ardha-uttanasana', 'name': 'Ardha Uttanasana', 'spoken': 'Ardha Uttanàsana', 'label': 'Mezzo piegamento',
         'quality': 'sus2', 'rays': ['spine', 'arms', 'legs'],
         'cue': "Schiena piatta come un raggio orizzontale, perpendicolare al raggio delle gambe.",
         # schiena piatta e orizzontale, sguardo avanti, dita alle tibie
@@ -189,7 +201,7 @@ POSES = [
                    'thigh': 90, 'shin': 90},
     },
     {
-        'id': 'chaturanga-dandasana', 'name': 'Chaturanga Dandasana', 'label': 'Bastone su quattro appoggi',
+        'id': 'chaturanga-dandasana', 'name': 'Chaturanga Dandasana', 'spoken': 'Ciaturanga Dandàsana', 'label': 'Bastone su quattro appoggi',
         'quality': 'sus2', 'rays': ['spine', 'upperArms', 'legs', 'foreArms'],
         'cue': "Dalla testa ai talloni un raggio solo. Gomiti a novanta gradi: avambracci a piombo, secondo raggio.",
         # corpo teso in diagonale, gomiti a 90 gradi stretti alle costole:
@@ -199,7 +211,7 @@ POSES = [
                    'thigh': 172, 'shin': 172},
     },
     {
-        'id': 'urdhva-mukha-svanasana', 'name': 'Urdhva Mukha Svanasana', 'label': 'Cane a testa in su',
+        'id': 'urdhva-mukha-svanasana', 'name': 'Urdhva Mukha Svanasana', 'spoken': 'Urdhva Mukha Svanàsana', 'label': 'Cane a testa in su',
         'quality': 'minor', 'rays': ['spine', 'arms', 'legs'],
         'cue': "Braccia a piombo come colonne. Il busto sale in diagonale, le gambe scendono sulla diagonale opposta.",
         # petto aperto in salita, braccia tese a piombo. Le gambe scendono
@@ -210,7 +222,7 @@ POSES = [
                    'thigh': 165, 'shin': 165},
     },
     {
-        'id': 'adho-mukha-svanasana', 'name': 'Adho Mukha Svanasana', 'label': 'Cane a testa in giu\'',
+        'id': 'adho-mukha-svanasana', 'name': 'Adho Mukha Svanasana', 'spoken': 'Adho Mukha Svanàsana', 'label': 'Cane a testa in giu\'',
         'quality': 'minor', 'rays': ['spine', 'arms', 'legs'],
         'cue': "Braccia e schiena sullo stesso raggio, dalle mani al bacino. Le gambe aprono il secondo lato della V.",
         # La V rovesciata: braccia e schiena su un'unica retta (stesso
@@ -262,6 +274,7 @@ def main():
         asanas.append({
             'id': pose['id'],
             'name': pose['name'],
+            'spoken': pose['spoken'],
             'label': pose['label'],
             'view': 'profile',
             'facing': 'right',
