@@ -78,14 +78,15 @@ function retta(P) {
 try {
     const dati = await (await fetch('../data/asanas.json?v=' + Date.now())).json();
     const lib = dati.rayLibrary;
-    const seq = dati.sequences[Object.keys(dati.sequences)[0]];
-
+    // tutte le sequenze, ogni asana una volta sola
     const visti = new Set();
     const elenco = [];
-    for (const id of seq.steps) {
-        if (visti.has(id)) { continue; }
-        visti.add(id);
-        elenco.push(dati.asanas.find(a => a.id === id));
+    for (const seq of Object.values(dati.sequences)) {
+        for (const id of seq.steps) {
+            if (visti.has(id)) { continue; }
+            visti.add(id);
+            elenco.push(dati.asanas.find(a => a.id === id));
+        }
     }
 
     cv.width = W * elenco.length;
@@ -118,10 +119,13 @@ try {
         // build_asanas.py) solo per non far coincidere i punti: su un
         // avambraccio quasi verticale quello scarto e' perpendicolare alla
         // retta e la farebbe sembrare storta quando non lo e'.
+        // Le gambe separate dell'affondo invece sono due linee vere: li' la
+        // media le metterebbe in mezzo, e si prende il punto del suo lato.
         const mediano = j => {
             const b = j.replace(/^[lr]/, '');
             const L = p['l' + b], R = p['r' + b];
-            return (L && R) ? { x: (L.x + R.x) / 2, y: (L.y + R.y) / 2 } : p[j];
+            const vicini = L && R && Math.hypot(L.x - R.x, L.y - R.y) < 0.03;
+            return vicini ? { x: (L.x + R.x) / 2, y: (L.y + R.y) / 2 } : p[j];
         };
         (a.rays || []).forEach(id => {
             const r = retta(lib[id].joints.map(mediano));

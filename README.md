@@ -109,6 +109,48 @@ Il basso segue il **circolo delle quinte** e avanza di una quinta a **ogni
 cambio di asana**. La qualità dell'accordo e il numero di note vengono invece
 dall'asana: tante note quante sono le sue rette.
 
+### Surya Namaskar di Sivananda (di serie)
+
+La sequenza che parte in modalità automatica è il Saluto al Sole classico
+di Sivananda, dodici passi:
+
+```
+ 1 Pranamasana                    C      mani giunte: 4 rette
+ 2 Hasta Uttanasana               G      inarcata, braccia al cielo
+ 3 Uttanasana                     Dsus2  piegamento in avanti (lo stesso della A)
+ 4 Ashwa Sanchalanasana           Asus2  affondo, gamba destra dietro: 5 rette
+ 5 Phalakasana                    Esus4  asse
+ 6 Ashtanga Namaskara             Bsus2  otto punti: 5 rette
+ 7 Bhujangasana                   F#m    cobra
+ 8 Adho Mukha Svanasana           C#m    cane a testa in giù (lo stesso della A)
+ 9 Ashwa Sanchalanasana           G#sus2 affondo, gamba destra avanti
+10 Uttanasana                     D#sus2
+11 Hasta Uttanasana               A#
+12 Pranamasana                    F
+```
+
+Dodici passi su dodici posizioni del circolo: ogni giro riparte da Do.
+La A resta nel menu *Sequenza*.
+
+Tre cose diverse dalle tavole, e il perché:
+
+- **l'affondo** ha le gambe separate, mentre fino a qui ogni asana era una
+  linea mediana sola. `build_asanas.py` accetta `thighL`/`shinL` e
+  `thighR`/`shinR`, e le rette dell'affondo sono di un lato solo: gamba
+  dietro tesa, coscia avanti, tibia avanti. Vale anche con l'altra gamba
+  (`eitherLeg`): di profilo una gamba copre l'altra e MediaPipe scambia
+  spesso quale sia la sinistra, quindi chiedere proprio quella dei dati
+  vorrebbe dire non riconoscere un affondo fatto bene. La voce dice comunque
+  quale gamba, e l'avatar la mostra;
+- **il busto nell'affondo** sta basso sulla coscia, non dritto come nel
+  disegno: il polso tocca terra solo se la spalla sta a meno di un braccio
+  dal pavimento;
+- **lo sguardo** resta nel prolungamento della schiena anche nel cobra e
+  nell'affondo. La retta della spina passa per anca, spalle e naso: con la
+  testa rovesciata non sarebbe una retta.
+
+### Surya Namaskara A
+
 ```
  1 Tadasana                C      C2 E3 G3
  2 Urdhva Hastasana        G      G2 B3 D4
@@ -866,7 +908,7 @@ il sito servito in locale con `python tools/serve.py`.
 
 | parametro | effetto |
 |---|---|
-| `?sequence=surya-namaskara-a` | sceglie la sequenza |
+| `?sequence=surya-namaskara-a` | sceglie la sequenza (di serie `surya-namaskar-sivananda`) |
 | `?mode=random` | asana a caso invece della sequenza |
 | `?asana=chaturanga-dandasana` | blocca un solo asana, utile per tarare i dati |
 | `?modo=libera` | parte gia' in modalita' libera (`?modo=auto` per l'altra) |

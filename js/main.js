@@ -174,7 +174,7 @@ function distanceHint(uPts) {
 function goToNextAsana(announce) {
     practice.advance();
 
-    tracker.setRays(practice.rays);
+    tracker.setRays(practice.rays, { eitherLeg: !!practice.current.eitherLeg });
     raysView.setRays(practice.rays);
     glowBody.setRays(practice.rays);
     audio.setChord(practice.noteDefs());
@@ -529,7 +529,7 @@ async function start() {
     // sequenza
     if (!libera) {
         const modeVal = el('modeSelect').value;
-        localStorage.setItem('yogasynth.mode', modeVal);
+        localStorage.setItem('yogasynth.sequenza', modeVal);
 
         donePauseMs = parseInt(el('pauseSelect').value, 10) || PAUSE_DEFAULT_MS;
         localStorage.setItem('yogasynth.pausa', String(donePauseMs));
@@ -790,7 +790,10 @@ function buildModeSelect() {
     o.textContent = 'Asana a caso';
     sel.appendChild(o);
 
-    const saved = localStorage.getItem('yogasynth.mode');
+    // Chiave nuova, non 'yogasynth.mode': finche' c'era solo la A, quella
+    // chiave l'ha salvata chiunque abbia premuto INIZIA, e avrebbe tenuto
+    // tutti sulla A invece della sequenza di serie.
+    const saved = localStorage.getItem('yogasynth.sequenza');
     if (saved && [...sel.options].some(x => x.value === saved)) sel.value = saved;
     const urlSeq = params.get('sequence');
     if (urlSeq) sel.value = 'sequence:' + urlSeq;

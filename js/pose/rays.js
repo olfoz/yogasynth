@@ -279,6 +279,18 @@ export function rayScore(ray, uPts, tPts) {
     };
 }
 
+/** Le stesse gambe con sinistra e destra scambiate (il bacino resta dov'e'). */
+export function swapLegs(pts) {
+    const out = Object.assign({}, pts);
+    for (const b of ['Hip', 'Knee', 'Ankle']) {
+        out['l' + b] = pts['r' + b];
+        out['r' + b] = pts['l' + b];
+        if (!out['l' + b]) delete out['l' + b];
+        if (!out['r' + b]) delete out['r' + b];
+    }
+    return out;
+}
+
 // Quanto deve staccare una delle due ipotesi (dritta o specchiata) perche'
 // il confronto conti come prova, e per quanti fotogrammi deve ripetersi
 // prima di diventare definitiva. Quindici fotogrammi sono circa mezzo
@@ -307,10 +319,28 @@ export class RayTracker {
         this.setRays([]);
     }
 
-    setRays(rays) {
+    /**
+     * @param {Array} rays
+     * @param {object} opts { eitherLeg }: le gambe dell'asana sono separate
+     *   (l'affondo) e vale tanto la sinistra quanto la destra. Non e'
+     *   indulgenza: di profilo una gamba copre l'altra, e MediaPipe scambia
+     *   spesso quale sia la sinistra. Chiedere proprio quella dei dati
+     *   vorrebbe dire non riconoscere un affondo fatto bene.
+     */
+    setRays(rays, opts = {}) {
         this.rays = rays;
+        this.eitherLeg = !!opts.eitherLeg;
         this.smooth = rays.map(() => 0);
         this.active = rays.map(() => false);
+    }
+
+    /** Punteggi delle rette contro un bersaglio, con le gambe come vengono meglio. */
+    _scores(uPts, tPts) {
+        const a = this.rays.map(r => rayScore(r, uPts, tPts));
+        if (!this.eitherLeg) return a;
+        const b = this.rays.map(r => rayScore(r, swapLegs(uPts), tPts));
+        const tot = list => list.reduce((s, r) => s + r.score, 0);
+        return tot(b) > tot(a) ? b : a;
     }
 
     reset() {
@@ -326,8 +356,8 @@ export class RayTracker {
         let details = new Array(n).fill(null);
 
         if (uPts && n) {
-            const dir = this.rays.map(r => rayScore(r, uPts, tPts));
-            const mir = this.rays.map(r => rayScore(r, uPts, tPtsMirror));
+            const dir = this._scores(uPts, tPts);
+            const mir = this._scores(uPts, tPtsMirror);
             if (!this.mirrorLocked) {
                 const totD = dir.reduce((s, r) => s + r.score, 0);
                 const totM = mir.reduce((s, r) => s + r.score, 0);

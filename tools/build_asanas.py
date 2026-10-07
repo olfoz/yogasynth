@@ -101,7 +101,13 @@ def chain(origin, steps):
 
 
 def build(pose):
-    """Angoli -> i 13 landmark. L'anca e' l'origine, poi si ricentra."""
+    """Angoli -> i 13 landmark. L'anca e' l'origine, poi si ricentra.
+
+    Di solito le due gambe sono una sola, sulla linea mediana. Nell'affondo
+    no: una va avanti piegata e l'altra resta dietro tesa. Per quelle pose
+    'thighL'/'shinL' e 'thighR'/'shinR' danno a ciascuna gamba i suoi angoli,
+    e prevalgono su 'thigh'/'shin'.
+    """
     a = pose['angles']
     hip = (0.0, 0.0)
 
@@ -109,37 +115,41 @@ def build(pose):
         (SEG['torso'], a['spine']),
         (SEG['head'], a['head']),
     ])
-    _, knee, ankle = chain(hip, [
-        (SEG['thigh'], a['thigh']),
-        (SEG['shin'], a['shin']),
-    ])
     _, elbow, wrist = chain(shoulder, [
         (SEG['upperArm'], a['upperArm']),
         (SEG['foreArm'], a['foreArm']),
     ])
+    legs = {}
+    for side in ('L', 'R'):
+        _, knee, ankle = chain(hip, [
+            (SEG['thigh'], a.get('thigh' + side, a.get('thigh'))),
+            (SEG['shin'], a.get('shin' + side, a.get('shin'))),
+        ])
+        legs[side] = {'knee': knee, 'ankle': ankle}
 
-    mid = {
-        'nose': nose, 'shoulder': shoulder, 'elbow': elbow, 'wrist': wrist,
-        'hip': hip, 'knee': knee, 'ankle': ankle,
-    }
+    # punti per lato: braccia, spalle e anche sulla mediana, gambe ciascuna
+    # per conto suo
+    sides = {}
+    for side in ('L', 'R'):
+        sides[side] = {
+            'shoulder': shoulder, 'elbow': elbow, 'wrist': wrist,
+            'hip': hip, 'knee': legs[side]['knee'], 'ankle': legs[side]['ankle'],
+        }
 
     # la posa entra nel riquadro: conta solo la forma, perche' l'app riancora
     # tutto sul bacino dell'utente, ma tenerla dentro 0..1 rende i dati
     # leggibili e il ripiego "centrato" corretto
-    xs = [p[0] for p in mid.values()]
-    ys = [p[1] for p in mid.values()]
+    every = [nose] + [p for side in sides.values() for p in side.values()]
+    xs = [p[0] for p in every]
+    ys = [p[1] for p in every]
     dx = 0.5 - (min(xs) + max(xs)) / 2
     dy = 0.5 - (min(ys) + max(ys)) / 2
 
-    out = {}
-    for name, (x, y) in mid.items():
-        x, y = round(x + dx, 4), round(y + dy, 4)
-        if name == 'nose':
-            out['nose'] = [x, y]
-        else:
-            key = name[0].upper() + name[1:]
-            out['l' + key] = [round(x - HALF_WIDTH, 4), y]
-            out['r' + key] = [round(x + HALF_WIDTH, 4), y]
+    out = {'nose': [round(nose[0] + dx, 4), round(nose[1] + dy, 4)]}
+    for side, offset in (('L', -HALF_WIDTH), ('R', HALF_WIDTH)):
+        for name, (x, y) in sides[side].items():
+            key = side.lower() + name[0].upper() + name[1:]
+            out[key] = [round(x + dx + offset, 4), round(y + dy, 4)]
 
     order = ['nose', 'lShoulder', 'rShoulder', 'lElbow', 'rElbow',
              'lWrist', 'rWrist', 'lHip', 'rHip', 'lKnee', 'rKnee',
@@ -236,6 +246,94 @@ POSES = [
         'angles': {'spine': 42, 'head': 42, 'upperArm': 42, 'foreArm': 42,
                    'thigh': 111, 'shin': 111},
     },
+
+    # ─── Surya Namaskar di Sivananda: le pose che la A non ha ────────────
+    #
+    # Una regola vale per tutte: il collo resta nel prolungamento della
+    # schiena. Le tavole mostrano lo sguardo al cielo nel cobra e
+    # nell'affondo, ma la retta della spina passa per anca, spalle e naso e
+    # deve essere dritta: con la testa rovesciata non ci sarebbe una retta
+    # su cui adagiarsi.
+    {
+        'id': 'pranamasana', 'name': 'Pranamasana', 'spoken': 'Pranamàsana', 'label': 'Saluto, mani giunte',
+        'quality': 'major', 'rays': ['spine', 'upperArms', 'legs', 'foreArms'],
+        'cue': "In piedi su un raggio solo. Mani giunte davanti allo sterno: braccio e avambraccio sono due raggi.",
+        # in piedi, gomiti lungo i fianchi, avambracci che salgono verso il
+        # petto: il polso arriva davanti allo sterno, poco sotto le spalle
+        'ground': ['ankle'],
+        'angles': {'spine': -90, 'head': -86, 'upperArm': 100, 'foreArm': -35,
+                   'thigh': 90, 'shin': 90},
+    },
+    {
+        'id': 'hasta-uttanasana', 'name': 'Hasta Uttanasana', 'spoken': 'Hasta Uttanàsana', 'label': 'Braccia al cielo, inarcati',
+        'quality': 'major', 'rays': ['spine', 'arms', 'legs'],
+        'cue': "Le braccia continuano la schiena all'indietro, su un raggio solo. Il bacino va avanti, le gambe restano tese.",
+        # Come Urdhva Hastasana, ma inarcata davvero: busto dieci gradi
+        # oltre la verticale, braccia che lo proseguono, bacino in avanti
+        # (le caviglie restano dietro l'anca di quattro gradi).
+        'ground': ['ankle'],
+        'angles': {'spine': -100, 'head': -104, 'upperArm': -112, 'foreArm': -114,
+                   'thigh': 94, 'shin': 94},
+    },
+    {
+        'id': 'ashwa-sanchalanasana-destra', 'name': 'Ashwa Sanchalanasana', 'spoken': 'Ashva Sancialanàsana, gamba destra dietro',
+        'label': 'Affondo, gamba destra dietro',
+        'quality': 'sus2', 'rays': ['spine', 'arms', 'backLegR', 'frontThighL', 'frontShinL'],
+        'eitherLeg': True,
+        'cue': "La gamba destra va indietro, tesa: un raggio. La sinistra resta avanti piegata: coscia e tibia sono altri due raggi.",
+        # Mani a terra accanto al piede davanti. Le proporzioni lo
+        # impongono: il polso tocca terra solo se la spalla sta a meno di un
+        # braccio dal pavimento, quindi il bacino scende (il ginocchio
+        # davanti passa oltre la caviglia) e il busto si allunga sulla
+        # coscia, diciassette gradi sopra l'orizzontale. La gamba dietro e'
+        # tesa e poggia sulle punte: e' l'unico modo di farne un raggio.
+        'ground': ['ankle', 'wrist'],
+        'angles': {'spine': -17, 'head': -21, 'upperArm': 98, 'foreArm': 100,
+                   'thighL': -5, 'shinL': 110, 'thighR': 155.7, 'shinR': 155.7},
+    },
+    {
+        'id': 'ashwa-sanchalanasana-sinistra', 'name': 'Ashwa Sanchalanasana', 'spoken': 'Ashva Sancialanàsana, gamba destra avanti',
+        'label': 'Affondo, gamba destra avanti',
+        'quality': 'sus2', 'rays': ['spine', 'arms', 'backLegL', 'frontThighR', 'frontShinR'],
+        'eitherLeg': True,
+        'cue': "La gamba destra torna avanti fra le mani, piegata. La sinistra resta dietro, tesa: un raggio.",
+        # la stessa posa a gambe scambiate
+        'ground': ['ankle', 'wrist'],
+        'angles': {'spine': -17, 'head': -21, 'upperArm': 98, 'foreArm': 100,
+                   'thighR': -5, 'shinR': 110, 'thighL': 155.7, 'shinL': 155.7},
+    },
+    {
+        'id': 'phalakasana', 'name': 'Phalakasana', 'spoken': 'Phalakàsana', 'label': 'Asse',
+        'quality': 'sus4', 'rays': ['spine', 'arms', 'legs'],
+        'cue': "Dalla testa ai talloni un raggio solo. Braccia tese a piombo, spalle sopra i polsi.",
+        # braccia a piombo e tese, quindi la spalla sta un braccio sopra il
+        # pavimento; il corpo e' una retta dalle punte dei piedi alla
+        # spalla: asin(0.24 / 0.66) = 21 gradi
+        'ground': ['wrist', 'ankle'],
+        'angles': {'spine': -21.3, 'head': -21, 'upperArm': 90, 'foreArm': 90,
+                   'thigh': 158.7, 'shin': 158.7},
+    },
+    {
+        'id': 'ashtanga-namaskara', 'name': 'Ashtanga Namaskara', 'spoken': 'Ashtànga Namaskàra', 'label': 'Otto punti',
+        'quality': 'sus2', 'rays': ['spine', 'upperArms', 'thighs', 'shins', 'foreArms'],
+        'cue': "Ginocchia, petto e mento a terra, bacino in alto. Cosce e tibie sono due raggi, come braccia e avambracci.",
+        # Otto appoggi: piedi, ginocchia, mani, petto, mento. Il bacino
+        # resta alto (0.16) e il busto scende in avanti fino al petto, che
+        # sfiora il pavimento; i gomiti puntano in alto, indietro.
+        'ground': ['knee', 'ankle', 'wrist'],
+        'angles': {'spine': 27, 'head': 17, 'upperArm': -150, 'foreArm': 59,
+                   'thigh': 128, 'shin': 180},
+    },
+    {
+        'id': 'bhujangasana', 'name': 'Bhujangasana', 'spoken': 'Bhujangàsana', 'label': 'Cobra',
+        'quality': 'minor', 'rays': ['spine', 'upperArms', 'legs', 'foreArms'],
+        'cue': "Gambe distese a terra, un raggio. Il petto sale in diagonale, gomiti piegati vicino ai fianchi.",
+        # bacino e gambe a terra, busto a quaranta gradi; le braccia non
+        # arrivano tese al pavimento da li', quindi i gomiti restano piegati
+        'ground': ['knee', 'ankle', 'wrist'],
+        'angles': {'spine': -40, 'head': -44, 'upperArm': 105, 'foreArm': 26,
+                   'thigh': 180, 'shin': 180},
+    },
 ]
 
 RAY_LIBRARY = {
@@ -249,6 +347,26 @@ RAY_LIBRARY = {
                   "color": "#00E5FF", "rgb": "0,229,255"},
     "foreArms": {"label": "Avambracci", "joints": ["lWrist", "lElbow", "rElbow", "rWrist"],
                  "color": "#69F0AE", "rgb": "105,240,174"},
+    # gambe piegate a terra (Ashtanga Namaskara): coscia e tibia sono due rette
+    "thighs": {"label": "Cosce", "joints": ["lKnee", "lHip", "rHip", "rKnee"],
+               "color": "#FFB300", "rgb": "255,179,0"},
+    "shins": {"label": "Tibie", "joints": ["lAnkle", "lKnee", "rKnee", "rAnkle"],
+              "color": "#FF7043", "rgb": "255,112,67"},
+    # Affondo: le gambe sono separate, e ogni retta e' di un lato solo. Il
+    # lato e' quello dei dati; chi pratica puo' usare l'altra gamba (vedi
+    # 'eitherLeg' e RayTracker in js/pose/rays.js).
+    "backLegR": {"label": "Gamba dietro", "joints": ["rAnkle", "rKnee", "rHip"],
+                 "color": "#FFB300", "rgb": "255,179,0"},
+    "backLegL": {"label": "Gamba dietro", "joints": ["lAnkle", "lKnee", "lHip"],
+                 "color": "#FFB300", "rgb": "255,179,0"},
+    "frontThighL": {"label": "Coscia avanti", "joints": ["lHip", "lKnee"],
+                    "color": "#FF7043", "rgb": "255,112,67"},
+    "frontThighR": {"label": "Coscia avanti", "joints": ["rHip", "rKnee"],
+                    "color": "#FF7043", "rgb": "255,112,67"},
+    "frontShinL": {"label": "Tibia avanti", "joints": ["lKnee", "lAnkle"],
+                   "color": "#F06292", "rgb": "240,98,146"},
+    "frontShinR": {"label": "Tibia avanti", "joints": ["rKnee", "rAnkle"],
+                   "color": "#F06292", "rgb": "240,98,146"},
 }
 
 DOC = {
@@ -267,11 +385,23 @@ SEQUENCE_STEPS = [
     'ardha-uttanasana', 'uttanasana', 'urdhva-hastasana', 'tadasana',
 ]
 
+# Il Surya Namaskar classico di Sivananda, dodici passi: e' la sequenza che
+# parte di serie (sta per prima in 'sequences'). Il piegamento in avanti e il
+# cane a testa in giu' sono gli stessi della A. Dodici passi su dodici
+# posizioni del circolo delle quinte: ogni giro riparte da Do.
+SIVANANDA_STEPS = [
+    'pranamasana', 'hasta-uttanasana', 'uttanasana',
+    'ashwa-sanchalanasana-destra', 'phalakasana', 'ashtanga-namaskara',
+    'bhujangasana', 'adho-mukha-svanasana', 'ashwa-sanchalanasana-sinistra',
+    'uttanasana', 'hasta-uttanasana', 'pranamasana',
+]
+
 
 def main():
     asanas = []
     for pose in POSES:
-        asanas.append({
+        extra = {'eitherLeg': True} if pose.get('eitherLeg') else {}
+        asanas.append(dict({
             'id': pose['id'],
             'name': pose['name'],
             'spoken': pose['spoken'],
@@ -284,13 +414,20 @@ def main():
             'ground': pose['ground'],
             'angles': pose['angles'],
             'landmarks': build(pose),
-        })
+        }, **extra))
 
     doc = {
         '_doc': DOC,
         'rayLibrary': RAY_LIBRARY,
         'asanas': asanas,
         'sequences': {
+            'surya-namaskar-sivananda': {
+                'name': 'Surya Namaskar',
+                'label': 'Saluto al Sole (Sivananda)',
+                'root': 'C',
+                'rootMode': 'spiral',
+                'steps': SIVANANDA_STEPS,
+            },
             'surya-namaskara-a': {
                 'name': 'Surya Namaskara A',
                 'label': 'Saluto al Sole A',

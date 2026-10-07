@@ -682,7 +682,14 @@ export class GuideAvatar {
             const a = tPts[joint];
             const b = other ? tPts[other] : null;
             if (!a) return null;
-            p = b ? { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 } : a;
+            // La mediana solo se i due lati sono davvero la stessa linea.
+            // Nell'affondo le gambe sono separate — una avanti, una dietro —
+            // e la media le metterebbe tutte e due in mezzo.
+            const torso = (tPts.shoulderMid && tPts.hipMid)
+                ? Math.hypot(tPts.shoulderMid.x - tPts.hipMid.x, tPts.shoulderMid.y - tPts.hipMid.y)
+                : 0.25;
+            const vicini = b && Math.hypot(a.x - b.x, a.y - b.y) < 0.25 * torso;
+            p = vicini ? { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 } : a;
         }
         if (!p) return null;
 

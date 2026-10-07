@@ -183,6 +183,34 @@ try{
   log.push('tadasana gambe: dritte='+sGood.toFixed(2)+'  piegate='+sBad.toFixed(2));
   if(sBad<sGood-0.25) ok('il punteggio scende con la posa sbagliata'); else bad('punteggio poco sensibile');
 
+  // affondo con l'altra gamba dietro: di profilo MediaPipe scambia spesso
+  // le gambe, quindi deve contare lo stesso (eitherLeg), e senza quella
+  // regola non deve contare
+  {
+    const aff=data.asanas.find(a=>a.id==='ashwa-sanchalanasana-destra');
+    const t=R.asanaPoints(aff), tm=R.mirrorPoints(R.asanaPoints(aff));
+    const scambiate=R.addMidpoints(R.swapLegs(t));
+    const media=res=>res.scores.reduce((s,v)=>s+v,0)/res.scores.length;
+    const prova=eitherLeg=>{
+      const k=new R.RayTracker(); k.setRays(R.buildAsanaRays(aff,data.rayLibrary),{eitherLeg});
+      let r; for(let i=0;i<40;i++) r=k.update(scambiate,t,tm); return r;
+    };
+    const conLibere=prova(true), senza=prova(false);
+    log.push('affondo a gambe scambiate: con eitherLeg='+media(conLibere).toFixed(2)+'  senza='+media(senza).toFixed(2));
+    if(conLibere.active.every(Boolean)) ok("l'affondo vale con l'una o l'altra gamba dietro"); else bad('affondo a gambe scambiate non riconosciuto');
+    if(!senza.active.every(Boolean)) ok('senza eitherLeg le gambe scambiate non bastano'); else bad('le gambe non contano affatto');
+    if(aff.eitherLeg && data.asanas.find(a=>a.id==='ashwa-sanchalanasana-sinistra').eitherLeg) ok('i due affondi dichiarano eitherLeg'); else bad('eitherLeg mancante nei dati');
+  }
+  // la sequenza di serie e' il Surya Namaskar di Sivananda, dodici passi
+  {
+    const primo=Object.keys(data.sequences)[0], s=data.sequences[primo];
+    if(primo==='surya-namaskar-sivananda'&&s.steps.length===12) ok('di serie: Surya Namaskar di Sivananda, 12 passi'); else bad('sequenza di serie: '+primo);
+    const q=new S.Practice(data,{mode:'sequence',sequenceId:primo});
+    const giro=[];for(let i=0;i<13;i++){q.advance();giro.push(q.current.id+' '+q.chord.symbol);}
+    log.push('  '+giro.join(' · '));
+    if(/^pranamasana C$/.test(giro[12])) ok('dodici passi su dodici quinte: il secondo giro riparte da Do'); else bad('secondo giro: '+giro[12]);
+  }
+
   // ── inquadratura: zoom e messa a fuoco ──────────────────────────────
   const { Stage, MAX_ZOOM } = await import('../js/render/stage.js?v='+Date.now());
   const box=document.createElement('div'); box.style.cssText='position:fixed;width:1px;height:1px;opacity:0'; document.body.appendChild(box);

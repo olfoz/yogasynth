@@ -51,7 +51,9 @@ for(const a of data.asanas){
     const w=sp.userData.effectorBone.getWorldPosition(new THREE.Vector3());
     const jn=EFF[k]; const other=jn[0]==='l'?'r'+jn.slice(1):jn[0]==='r'?'l'+jn.slice(1):null;
     const A=t[jn],B=other?t[other]:null;
-    const p=B?{x:(A.x+B.x)/2,y:(A.y+B.y)/2}:A;
+    // la mediana solo se i due lati coincidono: nell affondo le gambe sono separate
+    const vic=B&&Math.hypot(A.x-B.x,A.y-B.y)<0.03;
+    const p=vic?{x:(A.x+B.x)/2,y:(A.y+B.y)/2}:A;
     const d=Math.hypot(w.x-p.x,w.y-(1-p.y));
     errs.push(k+'='+d.toFixed(3));
   }

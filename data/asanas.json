@@ -66,6 +66,84 @@
       ],
       "color": "#69F0AE",
       "rgb": "105,240,174"
+    },
+    "thighs": {
+      "label": "Cosce",
+      "joints": [
+        "lKnee",
+        "lHip",
+        "rHip",
+        "rKnee"
+      ],
+      "color": "#FFB300",
+      "rgb": "255,179,0"
+    },
+    "shins": {
+      "label": "Tibie",
+      "joints": [
+        "lAnkle",
+        "lKnee",
+        "rKnee",
+        "rAnkle"
+      ],
+      "color": "#FF7043",
+      "rgb": "255,112,67"
+    },
+    "backLegR": {
+      "label": "Gamba dietro",
+      "joints": [
+        "rAnkle",
+        "rKnee",
+        "rHip"
+      ],
+      "color": "#FFB300",
+      "rgb": "255,179,0"
+    },
+    "backLegL": {
+      "label": "Gamba dietro",
+      "joints": [
+        "lAnkle",
+        "lKnee",
+        "lHip"
+      ],
+      "color": "#FFB300",
+      "rgb": "255,179,0"
+    },
+    "frontThighL": {
+      "label": "Coscia avanti",
+      "joints": [
+        "lHip",
+        "lKnee"
+      ],
+      "color": "#FF7043",
+      "rgb": "255,112,67"
+    },
+    "frontThighR": {
+      "label": "Coscia avanti",
+      "joints": [
+        "rHip",
+        "rKnee"
+      ],
+      "color": "#FF7043",
+      "rgb": "255,112,67"
+    },
+    "frontShinL": {
+      "label": "Tibia avanti",
+      "joints": [
+        "lKnee",
+        "lAnkle"
+      ],
+      "color": "#F06292",
+      "rgb": "240,98,146"
+    },
+    "frontShinR": {
+      "label": "Tibia avanti",
+      "joints": [
+        "rKnee",
+        "rAnkle"
+      ],
+      "color": "#F06292",
+      "rgb": "240,98,146"
     }
   },
   "asanas": [
@@ -633,9 +711,610 @@
           0.6842
         ]
       }
+    },
+    {
+      "id": "pranamasana",
+      "name": "Pranamasana",
+      "spoken": "Pranamàsana",
+      "label": "Saluto, mani giunte",
+      "view": "profile",
+      "facing": "right",
+      "quality": "major",
+      "rays": [
+        "spine",
+        "upperArms",
+        "legs",
+        "foreArms"
+      ],
+      "cue": "In piedi su un raggio solo. Mani giunte davanti allo sterno: braccio e avambraccio sono due raggi.",
+      "ground": [
+        "ankle"
+      ],
+      "angles": {
+        "spine": -90,
+        "head": -86,
+        "upperArm": 100,
+        "foreArm": -35,
+        "thigh": 90,
+        "shin": 90
+      },
+      "landmarks": {
+        "nose": [
+          0.4798,
+          0.1201
+        ],
+        "lShoulder": [
+          0.4628,
+          0.2203
+        ],
+        "rShoulder": [
+          0.4828,
+          0.2203
+        ],
+        "lElbow": [
+          0.4417,
+          0.3403
+        ],
+        "rElbow": [
+          0.4617,
+          0.3403
+        ],
+        "lWrist": [
+          0.5383,
+          0.2726
+        ],
+        "rWrist": [
+          0.5583,
+          0.2726
+        ],
+        "lHip": [
+          0.4628,
+          0.4853
+        ],
+        "rHip": [
+          0.4828,
+          0.4853
+        ],
+        "lKnee": [
+          0.4628,
+          0.6881
+        ],
+        "rKnee": [
+          0.4828,
+          0.6881
+        ],
+        "lAnkle": [
+          0.4628,
+          0.8799
+        ],
+        "rAnkle": [
+          0.4828,
+          0.8799
+        ]
+      }
+    },
+    {
+      "id": "hasta-uttanasana",
+      "name": "Hasta Uttanasana",
+      "spoken": "Hasta Uttanàsana",
+      "label": "Braccia al cielo, inarcati",
+      "view": "profile",
+      "facing": "right",
+      "quality": "major",
+      "rays": [
+        "spine",
+        "arms",
+        "legs"
+      ],
+      "cue": "Le braccia continuano la schiena all'indietro, su un raggio solo. Il bacino va avanti, le gambe restano tese.",
+      "ground": [
+        "ankle"
+      ],
+      "angles": {
+        "spine": -100,
+        "head": -104,
+        "upperArm": -112,
+        "foreArm": -114,
+        "thigh": 94,
+        "shin": 94
+      },
+      "landmarks": {
+        "nose": [
+          0.4995,
+          0.1856
+        ],
+        "lShoulder": [
+          0.5138,
+          0.2831
+        ],
+        "rShoulder": [
+          0.5338,
+          0.2831
+        ],
+        "lElbow": [
+          0.4682,
+          0.1702
+        ],
+        "rElbow": [
+          0.4882,
+          0.1702
+        ],
+        "lWrist": [
+          0.4202,
+          0.0623
+        ],
+        "rWrist": [
+          0.4402,
+          0.0623
+        ],
+        "lHip": [
+          0.5598,
+          0.544
+        ],
+        "rHip": [
+          0.5798,
+          0.544
+        ],
+        "lKnee": [
+          0.5457,
+          0.7464
+        ],
+        "rKnee": [
+          0.5657,
+          0.7464
+        ],
+        "lAnkle": [
+          0.5323,
+          0.9377
+        ],
+        "rAnkle": [
+          0.5523,
+          0.9377
+        ]
+      }
+    },
+    {
+      "id": "ashwa-sanchalanasana-destra",
+      "name": "Ashwa Sanchalanasana",
+      "spoken": "Ashva Sancialanàsana, gamba destra dietro",
+      "label": "Affondo, gamba destra dietro",
+      "view": "profile",
+      "facing": "right",
+      "quality": "sus2",
+      "rays": [
+        "spine",
+        "arms",
+        "backLegR",
+        "frontThighL",
+        "frontShinL"
+      ],
+      "cue": "La gamba destra va indietro, tesa: un raggio. La sinistra resta avanti piegata: coscia e tibia sono altri due raggi.",
+      "ground": [
+        "ankle",
+        "wrist"
+      ],
+      "angles": {
+        "spine": -17,
+        "head": -21,
+        "upperArm": 98,
+        "foreArm": 100,
+        "thighL": -5,
+        "shinL": 110,
+        "thighR": 155.7,
+        "shinR": 155.7
+      },
+      "landmarks": {
+        "nose": [
+          0.8534,
+          0.362
+        ],
+        "lShoulder": [
+          0.7496,
+          0.398
+        ],
+        "rShoulder": [
+          0.7696,
+          0.398
+        ],
+        "lElbow": [
+          0.7326,
+          0.5187
+        ],
+        "rElbow": [
+          0.7526,
+          0.5187
+        ],
+        "lWrist": [
+          0.7121,
+          0.6349
+        ],
+        "rWrist": [
+          0.7321,
+          0.6349
+        ],
+        "lHip": [
+          0.4962,
+          0.4755
+        ],
+        "rHip": [
+          0.5162,
+          0.4755
+        ],
+        "lKnee": [
+          0.6983,
+          0.4578
+        ],
+        "rKnee": [
+          0.3314,
+          0.559
+        ],
+        "lAnkle": [
+          0.6327,
+          0.638
+        ],
+        "rAnkle": [
+          0.1566,
+          0.6379
+        ]
+      },
+      "eitherLeg": true
+    },
+    {
+      "id": "ashwa-sanchalanasana-sinistra",
+      "name": "Ashwa Sanchalanasana",
+      "spoken": "Ashva Sancialanàsana, gamba destra avanti",
+      "label": "Affondo, gamba destra avanti",
+      "view": "profile",
+      "facing": "right",
+      "quality": "sus2",
+      "rays": [
+        "spine",
+        "arms",
+        "backLegL",
+        "frontThighR",
+        "frontShinR"
+      ],
+      "cue": "La gamba destra torna avanti fra le mani, piegata. La sinistra resta dietro, tesa: un raggio.",
+      "ground": [
+        "ankle",
+        "wrist"
+      ],
+      "angles": {
+        "spine": -17,
+        "head": -21,
+        "upperArm": 98,
+        "foreArm": 100,
+        "thighR": -5,
+        "shinR": 110,
+        "thighL": 155.7,
+        "shinL": 155.7
+      },
+      "landmarks": {
+        "nose": [
+          0.8534,
+          0.362
+        ],
+        "lShoulder": [
+          0.7496,
+          0.398
+        ],
+        "rShoulder": [
+          0.7696,
+          0.398
+        ],
+        "lElbow": [
+          0.7326,
+          0.5187
+        ],
+        "rElbow": [
+          0.7526,
+          0.5187
+        ],
+        "lWrist": [
+          0.7121,
+          0.6349
+        ],
+        "rWrist": [
+          0.7321,
+          0.6349
+        ],
+        "lHip": [
+          0.4962,
+          0.4755
+        ],
+        "rHip": [
+          0.5162,
+          0.4755
+        ],
+        "lKnee": [
+          0.3114,
+          0.559
+        ],
+        "rKnee": [
+          0.7183,
+          0.4578
+        ],
+        "lAnkle": [
+          0.1366,
+          0.6379
+        ],
+        "rAnkle": [
+          0.6527,
+          0.638
+        ]
+      },
+      "eitherLeg": true
+    },
+    {
+      "id": "phalakasana",
+      "name": "Phalakasana",
+      "spoken": "Phalakàsana",
+      "label": "Asse",
+      "view": "profile",
+      "facing": "right",
+      "quality": "sus4",
+      "rays": [
+        "spine",
+        "arms",
+        "legs"
+      ],
+      "cue": "Dalla testa ai talloni un raggio solo. Braccia tese a piombo, spalle sopra i polsi.",
+      "ground": [
+        "wrist",
+        "ankle"
+      ],
+      "angles": {
+        "spine": -21.3,
+        "head": -21,
+        "upperArm": 90,
+        "foreArm": 90,
+        "thigh": 158.7,
+        "shin": 158.7
+      },
+      "landmarks": {
+        "nose": [
+          0.8541,
+          0.3621
+        ],
+        "lShoulder": [
+          0.7503,
+          0.3981
+        ],
+        "rShoulder": [
+          0.7703,
+          0.3981
+        ],
+        "lElbow": [
+          0.7503,
+          0.5199
+        ],
+        "rElbow": [
+          0.7703,
+          0.5199
+        ],
+        "lWrist": [
+          0.7503,
+          0.6379
+        ],
+        "rWrist": [
+          0.7703,
+          0.6379
+        ],
+        "lHip": [
+          0.5035,
+          0.4943
+        ],
+        "rHip": [
+          0.5235,
+          0.4943
+        ],
+        "lKnee": [
+          0.3145,
+          0.568
+        ],
+        "rKnee": [
+          0.3345,
+          0.568
+        ],
+        "lAnkle": [
+          0.1359,
+          0.6376
+        ],
+        "rAnkle": [
+          0.1559,
+          0.6376
+        ]
+      }
+    },
+    {
+      "id": "ashtanga-namaskara",
+      "name": "Ashtanga Namaskara",
+      "spoken": "Ashtànga Namaskàra",
+      "label": "Otto punti",
+      "view": "profile",
+      "facing": "right",
+      "quality": "sus2",
+      "rays": [
+        "spine",
+        "upperArms",
+        "thighs",
+        "shins",
+        "foreArms"
+      ],
+      "cue": "Ginocchia, petto e mento a terra, bacino in alto. Cosce e tibie sono due raggi, come braccia e avambracci.",
+      "ground": [
+        "knee",
+        "ankle",
+        "wrist"
+      ],
+      "angles": {
+        "spine": 27,
+        "head": 17,
+        "upperArm": -150,
+        "foreArm": 59,
+        "thigh": 128,
+        "shin": 180
+      },
+      "landmarks": {
+        "nose": [
+          0.8244,
+          0.5694
+        ],
+        "lShoulder": [
+          0.7183,
+          0.54
+        ],
+        "rShoulder": [
+          0.7383,
+          0.54
+        ],
+        "lElbow": [
+          0.6128,
+          0.4791
+        ],
+        "rElbow": [
+          0.6328,
+          0.4791
+        ],
+        "lWrist": [
+          0.6736,
+          0.5803
+        ],
+        "rWrist": [
+          0.6936,
+          0.5803
+        ],
+        "lHip": [
+          0.4822,
+          0.4197
+        ],
+        "rHip": [
+          0.5022,
+          0.4197
+        ],
+        "lKnee": [
+          0.3574,
+          0.5796
+        ],
+        "rKnee": [
+          0.3774,
+          0.5796
+        ],
+        "lAnkle": [
+          0.1656,
+          0.5796
+        ],
+        "rAnkle": [
+          0.1856,
+          0.5796
+        ]
+      }
+    },
+    {
+      "id": "bhujangasana",
+      "name": "Bhujangasana",
+      "spoken": "Bhujangàsana",
+      "label": "Cobra",
+      "view": "profile",
+      "facing": "right",
+      "quality": "minor",
+      "rays": [
+        "spine",
+        "upperArms",
+        "legs",
+        "foreArms"
+      ],
+      "cue": "Gambe distese a terra, un raggio. Il petto sale in diagonale, gomiti piegati vicino ai fianchi.",
+      "ground": [
+        "knee",
+        "ankle",
+        "wrist"
+      ],
+      "angles": {
+        "spine": -40,
+        "head": -44,
+        "upperArm": 105,
+        "foreArm": 26,
+        "thigh": 180,
+        "shin": 180
+      },
+      "landmarks": {
+        "nose": [
+          0.8338,
+          0.38
+        ],
+        "lShoulder": [
+          0.7515,
+          0.4497
+        ],
+        "rShoulder": [
+          0.7715,
+          0.4497
+        ],
+        "lElbow": [
+          0.72,
+          0.5674
+        ],
+        "rElbow": [
+          0.74,
+          0.5674
+        ],
+        "lWrist": [
+          0.826,
+          0.6192
+        ],
+        "rWrist": [
+          0.846,
+          0.6192
+        ],
+        "lHip": [
+          0.5485,
+          0.62
+        ],
+        "rHip": [
+          0.5685,
+          0.62
+        ],
+        "lKnee": [
+          0.3457,
+          0.62
+        ],
+        "rKnee": [
+          0.3657,
+          0.62
+        ],
+        "lAnkle": [
+          0.154,
+          0.62
+        ],
+        "rAnkle": [
+          0.174,
+          0.62
+        ]
+      }
     }
   ],
   "sequences": {
+    "surya-namaskar-sivananda": {
+      "name": "Surya Namaskar",
+      "label": "Saluto al Sole (Sivananda)",
+      "root": "C",
+      "rootMode": "spiral",
+      "steps": [
+        "pranamasana",
+        "hasta-uttanasana",
+        "uttanasana",
+        "ashwa-sanchalanasana-destra",
+        "phalakasana",
+        "ashtanga-namaskara",
+        "bhujangasana",
+        "adho-mukha-svanasana",
+        "ashwa-sanchalanasana-sinistra",
+        "uttanasana",
+        "hasta-uttanasana",
+        "pranamasana"
+      ]
+    },
     "surya-namaskara-a": {
       "name": "Surya Namaskara A",
       "label": "Saluto al Sole A",
