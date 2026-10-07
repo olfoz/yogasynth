@@ -150,6 +150,7 @@ puoi metterti di profilo rivolto da una parte o dall'altra.
 index.html              guscio: DOM, importmap three, popup iniziale
 .gitignore              tiene fuori dronasana/ e yoga/ dalla pubblicazione
 schermo.html            pagina per il telefono: guarda e basta
+lezione.html            pagina degli allievi: l'avatar dell'insegnante, e il video
 css/styles.css
 data/asanas.json        asana di profilo, rette per asana, sequenza, accordi
 data/intro-sukhasana.json  l'animazione iniziale inclusa
@@ -166,6 +167,9 @@ js/
   schermo.js            confeziona e manda le posizioni al secondo schermo
   schermoView.js        disegno della scena sul telefono (non e' un modulo)
   peer.js               collegamento diretto WebRTC, lato computer
+  live.js               posa 3D dell'insegnante per l'avatar (modalita' libera)
+  lezione.js            la lezione lato insegnante: invito, allievi, video
+  allievo.js            la lezione lato allievo (lezione.html)
   qr.js                 codice QR dell'indirizzo, disegnato nel browser
   music/
     theory.js           circolo delle quinte, accordi, registri
@@ -602,6 +606,87 @@ Se dopo la regola ancora non va, in ordine:
 > chiunque sia sulla tua rete locale. Su una rete di casa va bene; su una
 > rete pubblica no.
 
+## Modalità libera e lezione
+
+Nella schermata iniziale si sceglie la **modalità**:
+
+- **Automatica**: quella descritta fin qui. La sequenza avanza da sola,
+  l'avatar mostra l'asana da raggiungere, le rette suonano.
+- **Libera, insegnamento**: niente sequenza. L'insegnante assume
+  **qualsiasi posizione** e l'avatar la ripete, in tre dimensioni. Rette e
+  suono restano spenti, perché senza un asana bersaglio non c'è niente da
+  misurare.
+
+### Lezione
+
+In modalità libera compare **Invita gli allievi**: un QR e un link
+(`…/lezione.html#vela-1021`). Gli allievi inquadrano il QR, oppure aprono il
+link che l'insegnante manda loro, e da casa vedono **l'avatar
+dell'insegnante** sul proprio schermo, che si muove con lui. Come per il
+telefono, l'invito si fa prima di INIZIA: gli allievi entrano con calma e
+l'avatar compare quando si comincia.
+
+È pensata **solo per le lezioni seguite online**. In sala gli allievi
+hanno già l'insegnante davanti, e la schermata iniziale lo ricorda.
+
+Agli allievi arrivano **posizioni, non immagini**: i giunti in 3D, già
+pronti per l'avatar, circa 650 byte venti volte al secondo
+([`js/live.js`](js/live.js)). L'avatar se lo disegna la pagina
+dell'allievo ([`lezione.html`](lezione.html), [`js/allievo.js`](js/allievo.js)),
+alla risoluzione del suo schermo. Il trasporto è il collegamento diretto del
+telefono, con un codice suo, così un telefono collegato e una lezione non si
+pestano i piedi ([`js/lezione.js`](js/lezione.js)).
+
+**Il video, a richiesta.** Se l'insegnante spunta *Video agli allievi*,
+ogni allievo sceglie, in basso sulla sua pagina:
+
+| | |
+|---|---|
+| **Solo avatar** | come senza video (di serie) |
+| **A lato** | avatar e video affiancati; uno sopra l'altro se il telefono è in verticale |
+| **Sovrapposto** | il video fa da sfondo, l'avatar ci sta sopra |
+
+Il video parte **solo verso chi l'ha chiesto**, e si ferma appena non lo
+vuole più. Conta, perché il computer dell'insegnante manda un flusso
+separato a ogni allievo. Ogni flusso ha un tetto di 600 kbit/s: dieci allievi
+stanno sotto i 6 Mbit/s in salita. Spento di serie: le immagini della
+webcam escono da questo computer solo se l'insegnante lo decide. Video e
+avatar sono specchiati entrambi, così l'allievo copia come davanti a uno
+specchio. Il video è **senza audio**: la voce, per ora, passa dalla
+videochiamata con cui si segue la lezione.
+
+**Il link d'invito** punta sempre al sito pubblicato
+(`SITO_PUBBLICO` in [`js/lezione.js`](js/lezione.js)), anche quando
+l'insegnante apre l'app da `localhost`: un link a `localhost` o a un
+`192.168.x.x`, a casa dell'allievo, non porta da nessuna parte. Funziona
+lo stesso, perché la posa non passa dal sito: il sito consegna solo la
+pagina. Ne segue che **`lezione.html` deve essere pubblicata** prima di
+fare lezione.
+
+### L'avatar che ripete l'insegnante
+
+MediaPipe calcola già, accanto ai landmark 2D, i `poseWorldLandmarks`: in
+metri, con l'origine fra le anche. In modalità automatica non servivano.
+Qui sì: un braccio teso verso la telecamera, in 2D, è solo un braccio
+corto. `GuideAvatar.poseLive` punta ogni osso lungo la *direzione* del
+segmento dell'insegnante, non verso il suo giunto, perché insegnante e
+modello non hanno le stesse proporzioni. Il verso del corpo lo dà la linea
+delle anche.
+
+Due accorgimenti, verificati in [`tools/banco-lezione.html`](tools/banco-lezione.html):
+
+- **specchio.** La posa si specchia come l'immagine della webcam, ma uno
+  specchio è un riflesso e nessuna rotazione dell'avatar lo riproduce: la
+  destra dell'insegnante, che nello specchio sta a destra, un avatar
+  rivolto verso di noi la raggiunge solo incrociando il braccio. Per questo
+  sinistra e destra si scambiano: riflesso e scambio si annullano, e
+  l'avatar diventa l'immagine allo specchio dell'insegnante, come in sala;
+- **si riparte ogni volta dalla posa di riposo.** La rotazione minima con
+  cui si punta un osso non decide la torsione attorno all'osso. Accumulata
+  un fotogramma dopo l'altro, dopo qualche giro di braccia l'avambraccio
+  resterebbe attorcigliato. Il banco fa 600 fotogrammi di cerchi e
+  controlla che si torni esattamente al punto di partenza.
+
 ## Pubblicare sul web
 
 **L'app funziona su un host statico**, e in un paio di aspetti funziona
@@ -784,6 +869,7 @@ il sito servito in locale con `python tools/serve.py`.
 | `?sequence=surya-namaskara-a` | sceglie la sequenza |
 | `?mode=random` | asana a caso invece della sequenza |
 | `?asana=chaturanga-dandasana` | blocca un solo asana, utile per tarare i dati |
+| `?modo=libera` | parte gia' in modalita' libera (`?modo=auto` per l'altra) |
 
 ## Aggiungere un asana
 
@@ -835,6 +921,7 @@ stesso con il prefisso del sito, per esempio
 | `/tools/banco-peer.html` | il giro completo del collegamento diretto: codice, presentazioni, canale, dati. Con `?relay=1` obbliga il passaggio dal TURN e misura il tempo di andata e ritorno |
 | `/tools/banco-qr.html` | la scheda "Apri sul telefono" nei due casi (sito pubblicato e ponte locale), col QR riletto da un decodificatore indipendente |
 | `/tools/banco-app.html` | apre l'app in un iframe, preme INIZIA e riporta stato ed errori |
+| `/tools/banco-lezione.html` | da aprire nel **browser vero**: posa dal vivo su pose note (ossa, specchio, profondita', torsione), poi una lezione vera con un allievo finto (pose, ritmo, video solo a chi lo chiede) e infine `lezione.html` in un iframe. L'esito va anche al ponte: `curl http://127.0.0.1:8941/live/state` |
 
 `banco-app.html` ha bisogno della webcam: da browser normale funziona, in
 Chrome headless `getUserMedia` non si risolve mai e il test si ferma

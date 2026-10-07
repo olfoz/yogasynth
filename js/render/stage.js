@@ -47,6 +47,10 @@ export class Stage {
         this.baseH = 1;
         this.zoom = 1;
         this.focus = { x: 2 / 3, y: 0.5 };   // in spazio isotropo
+        // Proporzioni del fotogramma, quando non le dice il video: sulla
+        // pagina degli allievi il video puo' non esserci, e la posa arriva
+        // nello spazio del fotogramma dell'insegnante.
+        this.frameAspect = 0;
 
         this.scene = new THREE.Scene();
 
@@ -128,16 +132,23 @@ export class Stage {
         this.bloom.strength = GLOW_MIN + (GLOW_MAX - GLOW_MIN) * Math.pow(this.glow, GLOW_CURVE);
     }
 
-    resize() {
+    /**
+     * @param {number} [width]  larghezza del palco; se manca, la finestra
+     * @param {number} [height] idem
+     */
+    resize(width, height) {
         const vw = (this.video && this.video.videoWidth) || 4;
         const vh = (this.video && this.video.videoHeight) || 3;
-        const aspect = vw / vh;
+        const aspect = this.frameAspect || vw / vh;
 
-        const w = window.innerWidth;
-        const h = window.innerHeight;
+        const w = width || window.innerWidth;
+        const h = height || window.innerHeight;
 
-        this.container.style.width = w + 'px';
-        this.container.style.height = h + 'px';
+        // con una misura data, il contenitore lo dimensiona chi la da'
+        if (!width) {
+            this.container.style.width = w + 'px';
+            this.container.style.height = h + 'px';
+        }
         this.renderer.setSize(w, h, false);
         this.composer.setSize(w, h);
         this.bloom.setSize(w, h);

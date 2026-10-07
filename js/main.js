@@ -13,15 +13,17 @@ import { GlowBody } from './render/glowBody.js';
 import { GuideAvatar } from './render/avatar.js';
 import { Hud } from './render/hud.js';
 import { PoseTracker } from './pose/tracker.js';
-import { RayTracker, userPoints, fitLine, addMidpoints, anchorTarget } from './pose/rays.js';
+import { RayTracker, userPoints, fitLine, addMidpoints, anchorTarget, buildAsanaRays } from './pose/rays.js';
 import { AudioEngine, MAX_HARMONICS } from './music/synth.js';
 import { Practice } from './sequence.js';
 import { FpsMeter } from './fps.js';
 import { Intro } from './intro.js';
-import { Schermo } from './schermo.js';
+import { Schermo, packPoints } from './schermo.js';
 import { VoiceOrder } from './music/voiceOrder.js';
 import { PeerHost } from './peer.js';
 import { mostraQr } from './qr.js';
+import { LiveSender } from './live.js';
+import { Lezione } from './lezione.js';
 
 // Tempi della pratica, dimezzati rispetto alle prime prove: sei secondi di
 // tenuta e trenta di attesa facevano sembrare la sequenza ferma.
@@ -69,6 +71,14 @@ let poseTracker = null;
 let intro = null;
 let schermo = null;
 let peer = null;
+
+// Modalita' libera: niente sequenza, l'insegnante assume la posizione che
+// vuole e l'avatar la ripete (vedi js/live.js). La lezione la porta agli
+// allievi (vedi js/lezione.js).
+let libera = false;
+let lezione = null;
+const liveSender = new LiveSender();
+let livePosato = false;
 const fps = new FpsMeter({ threshold: 40 });
 const ordine = new VoiceOrder();
 
@@ -264,6 +274,11 @@ function loop(now) {
         return;
     }
 
+    if (libera) {
+        loopLibero(now, dt, time);
+        return;
+    }
+
     const vp = stage.viewport;
     const uPts = userPoints(poseTracker.landmarks, vp.aspect);
     updateView(uPts, dt);
@@ -340,23 +355,13 @@ function loop(now) {
     glowBody.visible = showBody;
     if (showBody) glowBody.update(uPts, res.scores, res.active, time, dt);
 
-    // se la macchina non regge, l'avatar e' la prima cosa che si spegne:
-    // rette e suono devono restare fluidi
-    if (avatar && avatar.ready) {
-        if (showAvatar && fps.isSlow && !avatarAutoDisabled) {
-            avatarAutoDisabled = true;
-            console.info('[yogasynth] avatar disattivato: fps sotto soglia');
-        }
-        const on = showAvatar && !avatarAutoDisabled;
-        avatar.visible = on;
-        if (on) {
-            const view = practice.current.view || 'front';
-            const facing = res.mirrored
-                ? (practice.current.facing === 'left' ? 'right' : 'left')
-                : (practice.current.facing || 'right');
-            avatar.fitTo(anchored, view, facing);
-            avatar.poseTo(anchored, view);
-        }
+    if (avatarAcceso()) {
+        const view = practice.current.view || 'front';
+        const facing = res.mirrored
+            ? (practice.current.facing === 'left' ? 'right' : 'left')
+            : (practice.current.facing || 'right');
+        avatar.fitTo(anchored, view, facing);
+        avatar.poseTo(anchored, view);
     }
 
     // avanzamento perimetrale: prima meta' = quanto ci si avvicina,
@@ -408,6 +413,76 @@ function loop(now) {
     }
 }
 
+/**
+ * L'avatar va mostrato? Se la macchina non regge e' la prima cosa che si
+ * spegne: rette e suono devono restare fluidi. In modalita' libera agli
+ * allievi non cambia niente, perche' il loro avatar lo disegnano loro.
+ */
+function avatarAcceso() {
+    if (!avatar || !avatar.ready) return false;
+    if (showAvatar && fps.isSlow && !avatarAutoDisabled) {
+        avatarAutoDisabled = true;
+        console.info('[yogasynth] avatar disattivato: fps sotto soglia');
+    }
+    const on = showAvatar && !avatarAutoDisabled;
+    avatar.visible = on;
+    return on;
+}
+
+// ─── MODALITA' LIBERA ────────────────────────────────────────────────────
+
+// Il corpo luminoso senza una retta da raggiungere: a mezza luce e senza
+// riverbero, che in modalita' automatica e' il premio di una nota agganciata.
+const LIBERA_PUNTI = [0.55, 0.55, 0.55];
+const LIBERA_SPENTE = [false, false, false];
+
+function loopLibero(now, dt, time) {
+    const vp = stage.viewport;
+    const uPts = userPoints(poseTracker.landmarks, vp.aspect);
+    updateView(uPts, dt);
+    const live = liveSender.pack(poseTracker.worldLandmarks, poseTracker.landmarks, vp.aspect);
+
+    stage.setGlow(0.35, dt);
+    raysView.visible = false;
+    glowBody.visible = showBody;
+    if (showBody) glowBody.update(uPts, LIBERA_PUNTI, LIBERA_SPENTE, time, dt);
+
+    // finche' non ha una posa da ripetere l'avatar resterebbe in T, fermo
+    // in un angolo: compare con la prima
+    const on = avatarAcceso();
+    if (on && live) {
+        avatar.poseLive(live);
+        livePosato = true;
+    }
+    if (avatar && avatar.ready) avatar.visible = on && livePosato;
+
+    hud.clear();
+    hud.setStatus(uPts
+        ? "Modalità libera — qualsiasi posizione: l'avatar la ripete" + testoAllievi() + distanceHint(uPts)
+        : 'Mettiti davanti alla webcam, con tutto il corpo inquadrato...');
+
+    stage.render();
+
+    if (lezione && lezione.collegati) {
+        lezione.send({
+            t: Date.now(),
+            modo: 'lezione',
+            aspect: Math.round(vp.aspect * 10000) / 10000,
+            body: packPoints(uPts),
+            live,
+            video: lezione.videoDisponibile
+        });
+    }
+}
+
+function contaAllievi(n) {
+    return n === 0 ? 'nessun allievo' : n === 1 ? '1 allievo' : n + ' allievi';
+}
+
+function testoAllievi() {
+    return lezione && lezione.attiva ? '  ·  ' + contaAllievi(lezione.collegati) : '';
+}
+
 function startPractice() {
     goToNextAsana(false);
     asanaChangedAt = performance.now();
@@ -447,22 +522,28 @@ async function start() {
     const ptext = el('progressText');
     loading.classList.add('active');
 
-    // modalita'
-    const modeVal = el('modeSelect').value;
-    localStorage.setItem('yogasynth.mode', modeVal);
+    // automatica o libera
+    libera = el('tipoSelect').value === 'libera';
+    localStorage.setItem('yogasynth.tipo', libera ? 'libera' : 'auto');
 
-    donePauseMs = parseInt(el('pauseSelect').value, 10) || PAUSE_DEFAULT_MS;
-    localStorage.setItem('yogasynth.pausa', String(donePauseMs));
-    const mode = modeVal === 'random' ? 'random' : 'sequence';
-    const sequenceId = mode === 'sequence'
-        ? (modeVal.split(':')[1] || Object.keys(data.sequences)[0])
-        : Object.keys(data.sequences)[0];
+    // sequenza
+    if (!libera) {
+        const modeVal = el('modeSelect').value;
+        localStorage.setItem('yogasynth.mode', modeVal);
 
-    practice = new Practice(data, {
-        mode,
-        sequenceId,
-        forcedAsana: params.get('asana')
-    });
+        donePauseMs = parseInt(el('pauseSelect').value, 10) || PAUSE_DEFAULT_MS;
+        localStorage.setItem('yogasynth.pausa', String(donePauseMs));
+        const mode = modeVal === 'random' ? 'random' : 'sequence';
+        const sequenceId = mode === 'sequence'
+            ? (modeVal.split(':')[1] || Object.keys(data.sequences)[0])
+            : Object.keys(data.sequences)[0];
+
+        practice = new Practice(data, {
+            mode,
+            sequenceId,
+            forcedAsana: params.get('asana')
+        });
+    }
 
     showAvatar = el('avatarCheckbox').checked;
 
@@ -479,11 +560,14 @@ async function start() {
     stage = new Stage(stageEl, video);
     resizeAll();
     setupManualZoom(stageEl);
-    // la scheda del telefono lascia il popup e diventa quella fissa in basso
-    const scheda = el('castCard');
-    if (scheda && scheda.parentElement !== document.body) {
-        document.body.appendChild(scheda);
-        scheda.classList.remove('in-popup');
+    // le schede del telefono e della lezione lasciano il popup e diventano
+    // quelle fisse in basso a destra
+    for (const id of ['castCard', 'lezioneCard']) {
+        const scheda = el(id);
+        if (scheda && scheda.parentElement !== document.body) {
+            document.body.appendChild(scheda);
+            scheda.classList.remove('in-popup');
+        }
     }
     video.addEventListener('loadedmetadata', resizeAll);
     window.addEventListener('resize', resizeAll);
@@ -492,9 +576,19 @@ async function start() {
     glowBody = new GlowBody(stage.scene);
     tracker = new RayTracker();
 
-    audio = new AudioEngine();
-    audio.init();
-    if (audio.ctx.state === 'suspended') audio.ctx.resume();
+    if (libera) {
+        // il corpo si disegna con le tre rette di base, senza bersaglio
+        glowBody.setRays(buildAsanaRays({ rays: ['spine', 'arms', 'legs'] }, data.rayLibrary));
+        hud.setBadge('Lezione libera' + testoAllievi());
+        el('invitoCheckbox').checked = lezione.attiva;
+        el('invitoToggle').classList.toggle('active', lezione.attiva);
+        // il video agli allievi puo' partire solo da qui: prima la webcam non c'e'
+        if (lezione) lezione.setStream(poseTracker.stream);
+    } else {
+        audio = new AudioEngine();
+        audio.init();
+        if (audio.ctx.state === 'suspended') audio.ctx.resume();
+    }
 
     // avatar (facoltativo: se non carica, restano raggi e suono)
     // L'avatar NON blocca l'avvio.
@@ -516,13 +610,16 @@ async function start() {
 
     // minianimazione iniziale: vuole l'avatar, che potrebbe essere ancora in
     // viaggio. Gli si concede un attimo, poi si comincia comunque.
-    if (showAvatar && caricaAvatar._inCorso) {
+    if (!libera && showAvatar && caricaAvatar._inCorso) {
         await Promise.race([
             caricaAvatar._inCorso,
             new Promise(r => setTimeout(r, 4000))
         ]);
     }
-    if (avatar && avatar.ready) {
+    if (libera) {
+        // si comincia subito: l'insegnante ha una lezione da fare, e
+        // l'avatar compare da solo appena il modello e' arrivato
+    } else if (avatar && avatar.ready) {
         // durante l'intro la posa la detta l'animazione, non un asana:
         // e' Intro a mettere in scala e inquadrare l'avatar
         intro = new Intro(avatar, {
@@ -776,4 +873,108 @@ function fillIntroText() {
     setupToggle('bodyToggle', 'bodyCheckbox', v => showBody = v);
     setupToggle('raysToggle', 'raysCheckbox', v => showRays = v);
     el('restartButton').addEventListener('click', ricomincia);
+
+    setupLezione();
 })();
+
+// ─── MODALITA' E LEZIONE ─────────────────────────────────────────────────
+
+/**
+ * Scelta fra automatica e libera, e tutto quello che serve per invitare gli
+ * allievi. Come per il telefono, l'invito si fa PRIMA di INIZIA: gli allievi
+ * si collegano con calma e vedono comparire l'avatar quando si comincia.
+ */
+function setupLezione() {
+    const tipo = el('tipoSelect');
+    const salvato = localStorage.getItem('yogasynth.tipo');
+    if (params.get('modo') === 'libera' || params.get('modo') === 'auto') tipo.value = params.get('modo');
+    else if (salvato === 'libera' || salvato === 'auto') tipo.value = salvato;
+
+    const applica = () => {
+        const lib = tipo.value === 'libera';
+        document.body.classList.toggle('modo-libera', lib);
+        // una lezione aperta non resta in ascolto in modalita' automatica,
+        // e un telefono collegato non riceverebbe niente in modalita' libera
+        if (!lib && lezione && lezione.attiva) chiudiLezione();
+        if (lib && schermo && schermo.active) {
+            toggleSchermo(false);
+            el('castCheckbox').checked = false;
+            el('castToggle').classList.remove('active');
+            const b = el('pairButton');
+            b.disabled = false;
+            b.textContent = 'Collega un telefono';
+        }
+    };
+    tipo.addEventListener('change', applica);
+    applica();
+
+    lezione = new Lezione(info => {
+        const conta = contaAllievi(info.allievi);
+        el('lezioneConta').textContent = conta;
+        el('lezioneStato').textContent = (info.dettaglio ? info.stato + ' — ' + info.dettaglio : info.stato)
+            + (info.video ? '  ·  video verso ' + contaAllievi(info.video) : '');
+        if (running && libera) hud.setBadge('Lezione libera  ·  ' + conta);
+    });
+
+    el('invitaButton').addEventListener('click', invitaAllievi);
+
+    el('lezioneCopia').addEventListener('click', () => {
+        const link = el('lezioneUrl').textContent;
+        const b = el('lezioneCopia');
+        const fatto = testo => {
+            b.textContent = testo;
+            setTimeout(() => { b.textContent = 'Copia il link'; }, 1800);
+        };
+        if (!/^https?:/.test(link)) return;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(link).then(() => fatto('Copiato ✓'), () => fatto('Copia a mano'));
+        } else {
+            fatto('Copia a mano');
+        }
+    });
+
+    el('lezioneVideo').addEventListener('change', e => lezione.setVideo(e.target.checked));
+
+    // la scheda si nasconde e la lezione resta aperta; se non era ancora
+    // aperta, accendere l'interruttore la apre (si puo' invitare anche dopo INIZIA)
+    setupToggle('invitoToggle', 'invitoCheckbox', v => {
+        if (v && !lezione.attiva) { invitaAllievi(); return; }
+        el('lezioneCard').classList.toggle('hidden', !v);
+    });
+}
+
+async function invitaAllievi() {
+    const b = el('invitaButton');
+    const card = el('lezioneCard');
+    b.disabled = true;
+    b.textContent = 'apro la lezione…';
+    card.classList.remove('hidden');
+    el('lezioneUrl').textContent = 'preparo il collegamento…';
+    el('lezioneNote').textContent = '';
+
+    const link = await lezione.apri();
+    if (!link) {
+        el('lezioneUrl').textContent = 'Collegamento diretto non disponibile: serve internet.';
+        b.disabled = false;
+        b.textContent = 'Riprova';
+        el('invitoCheckbox').checked = false;
+        el('invitoToggle').classList.remove('active');
+        return;
+    }
+
+    el('lezioneUrl').textContent = link;
+    el('lezioneNote').innerHTML = 'Gli allievi inquadrano il codice, oppure mandi loro il link. '
+        + 'Se serve a mano, il codice è <span class="codice">' + lezione.codice + '</span>.';
+    mostraQr(el('lezioneQr'), link);
+    b.textContent = 'Allievi invitati: premi INIZIA quando vuoi';
+
+    if (card.scrollIntoView) card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function chiudiLezione() {
+    lezione.chiudi();
+    el('lezioneCard').classList.add('hidden');
+    const b = el('invitaButton');
+    b.disabled = false;
+    b.textContent = 'Invita gli allievi';
+}

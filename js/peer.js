@@ -91,16 +91,16 @@ export function nuovoCodice() {
 }
 
 /** Lo stesso codice fra una sessione e l'altra, cosi' non si ridigita ogni volta. */
-export function codiceSalvato() {
+export function codiceSalvato(chiave = CODE_KEY) {
     try {
-        const salvato = localStorage.getItem(CODE_KEY);
+        const salvato = localStorage.getItem(chiave);
         if (salvato) return salvato;
     } catch (e) { /* archiviazione non disponibile */ }
     return null;
 }
 
-function salvaCodice(codice) {
-    try { localStorage.setItem(CODE_KEY, codice); }
+function salvaCodice(codice, chiave = CODE_KEY) {
+    try { localStorage.setItem(chiave, codice); }
     catch (e) { /* archiviazione non disponibile */ }
 }
 
@@ -129,9 +129,23 @@ export function caricaPeerJS() {
  * colleghi con quel codice.
  */
 export class PeerHost {
-    /** @param {function} onStato chiamata a ogni cambio: (testo, dettaglio) */
-    constructor(onStato) {
+    /**
+     * @param {function} onStato chiamata a ogni cambio: (testo, dettaglio)
+     * @param {object} opzioni   per la lezione, che e' un altro ascolto con un
+     *   altro codice: { prefisso, chiave, hz, attesa, collegato }
+     *   (`attesa` e `collegato` sono i testi di stato)
+     */
+    constructor(onStato, opzioni = {}) {
         this.onStato = onStato || function () {};
+        this.prefisso = opzioni.prefisso || PREFIX;
+        this.chiave = opzioni.chiave || CODE_KEY;
+        this.hz = opzioni.hz || HZ_DIRETTO;
+        this.testoAttesa = opzioni.attesa || 'in attesa del telefono';
+        this.testoCollegato = opzioni.collegato || 'telefono collegato';
+        // (conn, messaggio): quello che manda chi si e' collegato
+        this.onMessaggio = null;
+        // (conn): una connessione si e' chiusa
+        this.onChiusa = null;
         this.peer = null;
         this.connessioni = [];
         this._ultimoInvio = 0;
@@ -145,8 +159,8 @@ export class PeerHost {
     /** @param {string} codice se manca, si riusa quello salvato o se ne fa uno nuovo */
     async start(codice) {
         this.attivo = true;
-        this.codice = codice || codiceSalvato() || nuovoCodice();
-        salvaCodice(this.codice);
+        this.codice = codice || codiceSalvato(this.chiave) || nuovoCodice();
+        salvaCodice(this.codice, this.chiave);
         this.onStato('collegamento al servizio di incontro...');
 
         let Peer;
@@ -164,11 +178,11 @@ export class PeerHost {
 
     _apri(Peer) {
         if (!this.attivo) return;
-        this.peer = new Peer(PREFIX + this.codice, { debug: 0, config: this.ice });
+        this.peer = new Peer(this.prefisso + this.codice, { debug: 0, config: this.ice });
 
         this.peer.on('open', () => {
             this._tentativi = 0;
-            this.onStato('in attesa del telefono');
+            this.onStato(this.testoAttesa);
         });
 
         // Il collegamento al servizio di incontro puo' cadere senza che se ne
@@ -183,11 +197,14 @@ export class PeerHost {
         this.peer.on('connection', conn => {
             conn.on('open', () => {
                 this.connessioni.push(conn);
-                this.onStato('telefono collegato');
+                this.onStato(this.testoCollegato);
             });
+            conn.on('data', msg => { if (this.onMessaggio) this.onMessaggio(conn, msg); });
             const chiudi = () => {
+                if (!this.connessioni.includes(conn)) return;   // 'close' ed 'error' insieme
                 this.connessioni = this.connessioni.filter(c => c !== conn);
-                this.onStato(this.connessioni.length ? 'telefono collegato' : 'in attesa del telefono');
+                this.onStato(this.connessioni.length ? this.testoCollegato : this.testoAttesa);
+                if (this.onChiusa) this.onChiusa(conn);
             };
             conn.on('close', chiudi);
             conn.on('error', chiudi);
@@ -199,7 +216,7 @@ export class PeerHost {
             if (err && err.type === 'unavailable-id' && this._tentativi < 3) {
                 this._tentativi++;
                 this.codice = nuovoCodice();
-                salvaCodice(this.codice);
+                salvaCodice(this.codice, this.chiave);
                 this.onStato("codice gia' in uso, ne provo un altro");
                 try { this.peer.destroy(); } catch (e) { /* gia' chiuso */ }
                 this._apri(Peer);
@@ -227,8 +244,14 @@ export class PeerHost {
     send(snap) {
         if (!this.connessioni.length) return;
         const ora = performance.now();
-        if (ora - this._ultimoInvio < 1000 / HZ_DIRETTO) return;
-        this._ultimoInvio = ora;
+        const passo = 1000 / this.hz;
+        if (ora - this._ultimoInvio < passo) return;
+        // Si avanza di un passo, non fino a "adesso". Chi chiama lo fa a ogni
+        // fotogramma, e un fotogramma arrivato a 49,9 ms invece di 50 veniva
+        // scartato: il ritmo vero scendeva fino alla meta' di quello
+        // dichiarato (misurato in tools/banco-lezione.html: 11 Hz su 20).
+        // Il max() evita di recuperare a raffica dopo una pausa.
+        this._ultimoInvio = Math.max(this._ultimoInvio + passo, ora - passo);
 
         for (const conn of this.connessioni) {
             try {

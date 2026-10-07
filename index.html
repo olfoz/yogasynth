@@ -30,7 +30,7 @@
     </div>
 
     <!-- Pentagramma con le note dell'accordo, una per retta -->
-    <div class="chord-staff" id="chordStaff"></div>
+    <div class="chord-staff solo-auto" id="chordStaff"></div>
 
     <div class="bottom-toggle-panel">
         <div class="toggle-container">
@@ -54,16 +54,23 @@
                 <span class="toggle-slider"></span>
             </div>
         </div>
-        <div class="toggle-container">
+        <div class="toggle-container solo-libera">
+            <span class="toggle-label" title="Mostra o nasconde la scheda con il QR per gli allievi. La lezione resta aperta.">Invito</span>
+            <div class="toggle-switch active" id="invitoToggle">
+                <input type="checkbox" id="invitoCheckbox" checked>
+                <span class="toggle-slider"></span>
+            </div>
+        </div>
+        <div class="toggle-container solo-auto">
             <span class="toggle-label" title="Manda quello che vedi a un telefono, da mettere davanti a te">Telefono</span>
             <div class="toggle-switch" id="castToggle">
                 <input type="checkbox" id="castCheckbox">
                 <span class="toggle-slider"></span>
             </div>
         </div>
-        <button id="restartButton" class="restart-button"
+        <button id="restartButton" class="restart-button solo-auto"
                 title="Riparte da Tadasana senza ricollegare il telefono">&#8634; Ricomincia</button>
-        <div class="toggle-container">
+        <div class="toggle-container solo-auto">
             <span class="toggle-label">Raggi</span>
             <div class="toggle-switch active" id="raysToggle">
                 <input type="checkbox" id="raysCheckbox" checked>
@@ -90,7 +97,32 @@
         <div class="popup-header">
             <h2 class="popup-title">&#10022; yogasynth</h2>
         </div>
-        <div class="start-desc">
+        <div class="cam-row">
+            <label for="tipoSelect">&#9881; Modalit&agrave;</label>
+            <select id="tipoSelect">
+                <option value="auto">Automatica &mdash; segue la sequenza</option>
+                <option value="libera">Libera &mdash; insegnamento</option>
+            </select>
+        </div>
+        <div class="start-desc solo-libera">
+            In modalit&agrave; <b>libera</b> non c'&egrave; una sequenza: assumi
+            <b>qualsiasi posizione</b> e l'avatar la ripete, in tre dimensioni.<br><br>
+            <b>Lezione.</b> Invita gli allievi: inquadrano il QR, oppure aprono il
+            link che mandi loro, e da casa vedono <b>il tuo avatar</b> sul loro
+            schermo. Se accendi <b>Video agli allievi</b>, ognuno pu&ograve;
+            aggiungere il tuo video, a lato dell'avatar o sovrapposto, come preferisce.
+            <div class="consiglio">
+                &#128161; Consigliata <b>solo quando la pratica si segue online</b>,
+                da casa. In sala gli allievi hanno gi&agrave; te davanti.
+            </div>
+            <div class="privacy">
+                &#128274; Agli allievi arrivano <b>le posizioni del corpo, non le
+                immagini</b>, dirette da questo computer al loro, senza passare da un
+                server. Le immagini della webcam escono solo se accendi
+                <b>Video agli allievi</b>, e solo verso chi l'ha chiesto.
+            </div>
+        </div>
+        <div class="start-desc solo-auto">
             Ogni asana proietta delle <b>rette</b>, che vedi come <b>raggi cosmici</b>:
             adagia il corpo su di loro.<br><br>
             Ogni raggio &egrave; una nota dell'accordo, sempre nello stesso ordine:<br>
@@ -110,11 +142,11 @@
                 browser, e non viene inviato o registrato niente.
             </div>
         </div>
-        <div class="cam-row">
+        <div class="cam-row solo-auto">
             <label for="modeSelect">&#129517; Sequenza</label>
             <select id="modeSelect"></select>
         </div>
-        <div class="cam-row">
+        <div class="cam-row solo-auto">
             <label for="pauseSelect" title="E' dentro questa pausa che la voce annuncia il prossimo asana">&#9203; Pausa fra un asana e l'altro</label>
             <select id="pauseSelect">
                 <option value="800">0,8 s &mdash; veloce</option>
@@ -128,7 +160,7 @@
             <select id="cameraSelect"><option value="">Predefinita</option></select>
             <button id="camRefresh" title="Rileva le webcam disponibili">&#128260;</button>
         </div>
-        <div class="cam-row">
+        <div class="cam-row solo-auto">
             <label>&#128241; Secondo schermo</label>
             <button id="pairButton" class="pair-button">Collega un telefono</button>
         </div>
@@ -137,7 +169,28 @@
              collega il telefono, lo si appoggia davanti a se', e solo dopo
              si comincia. All'avvio della pratica viene spostata fuori dal
              popup e diventa la scheda fissa in basso a destra. -->
-        <div class="cast-card in-popup hidden" id="castCard">
+        <div class="cam-row solo-libera">
+            <label>&#128101; Allievi</label>
+            <button id="invitaButton" class="pair-button">Invita gli allievi</button>
+        </div>
+
+        <!-- Scheda della lezione: come quella del telefono nasce nel popup,
+             e all'avvio diventa la scheda fissa in basso a destra. -->
+        <div class="cast-card in-popup hidden solo-libera" id="lezioneCard">
+            <div class="cast-title">&#128101; Lezione &middot; <span id="lezioneConta">nessun allievo</span></div>
+            <div class="cast-qr" id="lezioneQr"></div>
+            <code id="lezioneUrl">&hellip;</code>
+            <div class="lezione-azioni">
+                <button id="lezioneCopia" class="pair-button">Copia il link</button>
+                <label class="spunta" title="Le immagini della webcam vanno, dirette, solo agli allievi che le chiedono">
+                    <input type="checkbox" id="lezioneVideo"> Video agli allievi
+                </label>
+            </div>
+            <div class="cast-note" id="lezioneNote"></div>
+            <div class="cast-note" id="lezioneStato">&nbsp;</div>
+        </div>
+
+        <div class="cast-card in-popup hidden solo-auto" id="castCard">
             <div class="cast-title">&#128241; Apri sul telefono</div>
             <div class="cast-qr" id="castQr"></div>
             <code id="castUrl">&hellip;</code>

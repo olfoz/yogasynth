@@ -19,7 +19,7 @@ function r4(v) {
     return Math.round(v * 10000) / 10000;
 }
 
-function packPoints(uPts) {
+export function packPoints(uPts) {
     if (!uPts) return null;
     const out = {};
     for (const k in uPts) out[k] = [r4(uPts[k].x), r4(uPts[k].y)];

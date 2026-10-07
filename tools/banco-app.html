@@ -11,7 +11,7 @@
 </head>
 <body>
 <pre id="out">avvio…</pre>
-<iframe id="app" src="../index.html" allow="camera; microphone; autoplay"></iframe>
+<iframe id="app" allow="camera; microphone; autoplay"></iframe>
 <script>
 // Carica l'app vera in un iframe, preme INIZIA e racconta cosa succede.
 // Va aperto da Chrome con la webcam finta, altrimenti getUserMedia fallisce:
@@ -20,11 +20,19 @@
 //          --use-fake-ui-for-media-stream --autoplay-policy=no-user-gesture-required
 //          --virtual-time-budget=120000 --dump-dom
 //          http://127.0.0.1:8941/tools/banco-app.html
+//
+// I parametri passano all'app: banco-app.html?modo=libera prova la
+// modalita' libera, e in quel caso preme anche "Invita gli allievi".
 const log = [];
-const out = () => document.getElementById('out').textContent = log.join('\n');
+// l'esito va anche al ponte di tools/serve.py, per leggerlo con curl
+const out = () => {
+    document.getElementById('out').textContent = log.join('\n');
+    fetch('../live/state', { method: 'POST', body: JSON.stringify({ banco: 'app', righe: log }) }).catch(() => {});
+};
 const say = m => { log.push(m); out(); };
 
 const frame = document.getElementById('app');
+frame.src = '../index.html' + location.search;
 const wait = ms => new Promise(r => setTimeout(r, ms));
 
 frame.addEventListener('load', async () => {
@@ -41,6 +49,14 @@ frame.addEventListener('load', async () => {
     say('accordi in anteprima: ' + txt('chordPreview'));
     say('sequenze nel menu:    ' + [...d.getElementById('modeSelect').options].map(o => o.value).join(', '));
     say('barra di stato:       ' + txt('statusBar'));
+    const libera = d.body.classList.contains('modo-libera');
+    say('modalita:             ' + (libera ? 'libera' : 'automatica'));
+    if (libera) {
+        d.getElementById('invitaButton').click();
+        await wait(5000);
+        say('invito:               ' + txt('lezioneUrl'));
+        say('lezione:              ' + txt('lezioneConta') + ' / ' + txt('lezioneStato'));
+    }
 
     d.getElementById('startButton').click();
     say('');

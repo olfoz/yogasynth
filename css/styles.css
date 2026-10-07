@@ -382,6 +382,42 @@ body {
 }
 .load-button:hover { filter: brightness(1.08); }
 
+/* ─── Modalita': automatica o libera ──────────────────────────────────── */
+
+/* Ogni elemento che ha senso in una modalita' sola porta la sua classe; il
+   body dice quale modalita' e' scelta. */
+body.modo-libera .solo-auto,
+body:not(.modo-libera) .solo-libera { display: none !important; }
+
+.consiglio {
+    margin-top: 14px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: rgba(0, 229, 255, 0.08);
+    border: 1px solid rgba(0, 229, 255, 0.25);
+    font-size: 12px;
+    line-height: 1.5;
+    color: #b9c0d4;
+}
+
+.lezione-azioni {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 8px;
+}
+.lezione-azioni .pair-button { flex: 0 0 auto; }
+.spunta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #cfd5e6;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.spunta input { accent-color: #7C4DFF; }
+
 @media (max-width: 768px) {
     .status-bar { left: 12px; right: 12px; bottom: 76px; max-width: none; }
     .cast-card { left: 12px; right: 12px; bottom: 132px; max-width: none; }

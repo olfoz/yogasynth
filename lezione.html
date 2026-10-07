@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>yogasynth — lezione</title>
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+        width: 100%;
+        height: 100%;
+        background: #05060b;
+        color: #e9ecf5;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        overflow: hidden;
+        -webkit-user-select: none;
+        user-select: none;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    /* Il palco dell'avatar e il video dell'insegnante. Quanto spazio prende
+       ciascuno lo decide la classe del body, cioe' la scelta dell'allievo. */
+    #palco {
+        position: absolute;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        overflow: hidden;
+    }
+    #palco canvas {
+        position: absolute;
+        top: 0; left: 0;
+        width: 100% !important;
+        height: 100% !important;
+        display: block;
+    }
+    #video {
+        position: absolute;
+        background: #000;
+        object-fit: contain;
+        /* specchiato come l'avatar: chi guarda copia come davanti a uno specchio */
+        transform: scaleX(-1);
+    }
+    /* Senza video, o sovrapposto, l'elemento non si vede: nel secondo caso fa
+       da sorgente alla texture di fondo della scena. Non display:none, che
+       in qualche browser ferma l'aggiornamento della texture. */
+    body.vista-nessuno #video,
+    body.vista-sovrapposto #video {
+        position: fixed;
+        top: 0; left: -10000px;
+        width: 2px; height: 2px;
+        opacity: 0;
+        pointer-events: none;
+    }
+    body.vista-lato #palco { width: 50%; }
+    body.vista-lato #video { top: 0; right: 0; width: 50%; height: 100%; }
+    @media (orientation: portrait) {
+        body.vista-lato #palco { width: 100%; height: 50%; }
+        body.vista-lato #video { top: auto; bottom: 0; width: 100%; height: 50%; }
+    }
+
+    .testata {
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        padding: 12px 16px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        pointer-events: none;
+        z-index: 5;
+        font-size: 14px;
+    }
+    .testata .logo { color: #cbb6ff; font-weight: 700; letter-spacing: 0.04em; }
+    #stato {
+        font-size: 12px;
+        color: #8b93ad;
+        padding: 3px 10px;
+        border-radius: 999px;
+        background: rgba(14, 16, 30, 0.75);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    #stato.dal-vivo { color: #69F0AE; border-color: rgba(105, 240, 174, 0.35); }
+
+    .comandi {
+        position: absolute;
+        left: 50%;
+        bottom: 16px;
+        transform: translateX(-50%);
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        padding: 5px;
+        border-radius: 999px;
+        background: rgba(14, 16, 30, 0.88);
+        border: 1px solid rgba(124, 77, 255, 0.4);
+        z-index: 5;
+        max-width: calc(100vw - 32px);
+    }
+    .comandi .etichetta { font-size: 12px; color: #8b93ad; padding: 0 8px 0 10px; }
+    .comandi button {
+        border: none;
+        border-radius: 999px;
+        padding: 8px 14px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #cfd5e6;
+        background: transparent;
+        cursor: pointer;
+        white-space: nowrap;
+    }
+    .comandi button.scelto { background: #7C4DFF; color: #fff; }
+    .comandi button:disabled { opacity: 0.35; cursor: default; }
+
+    #caricamento {
+        position: absolute;
+        top: 48px; left: 16px;
+        font-size: 12px;
+        color: #8b93ad;
+        z-index: 5;
+        pointer-events: none;
+    }
+    #caricamento:empty { display: none; }
+
+    #pannello {
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 28px;
+        background: #05060b;
+        font-size: 17px;
+        line-height: 1.5;
+        color: #aab2c8;
+        z-index: 10;
+    }
+    #pannello.nascosto { display: none; }
+    #pannello b { color: #e9ecf5; }
+    #pannello .piccolo { font-size: 13px; color: #8b93ad; margin-top: 14px; max-width: 520px; }
+    #pannello .errore {
+        font-size: 12px;
+        color: #ff9a9a;
+        margin-top: 14px;
+        word-break: break-word;
+        font-family: ui-monospace, monospace;
+        max-width: 520px;
+    }
+    #pannello .errore:empty { display: none; }
+    .riga-codice { margin-top: 18px; display: flex; gap: 8px; }
+    .riga-codice.nascosto { display: none; }
+    .riga-codice input {
+        font-size: 17px;
+        font-family: ui-monospace, monospace;
+        padding: 10px 14px;
+        width: 220px;
+        border-radius: 10px;
+        border: 2px solid #7C4DFF;
+        background: #11142a;
+        color: #e9ecf5;
+        text-align: center;
+    }
+    .riga-codice button {
+        font-size: 16px;
+        font-weight: 700;
+        padding: 10px 18px;
+        border-radius: 10px;
+        border: none;
+        background: #7C4DFF;
+        color: #fff;
+        cursor: pointer;
+    }
+</style>
+</head>
+<body class="vista-nessuno">
+    <div id="palco"></div>
+    <video id="video" playsinline autoplay muted></video>
+
+    <div class="testata">
+        <span class="logo">&#10022; yogasynth &middot; lezione</span>
+        <span id="stato">collegamento&hellip;</span>
+    </div>
+    <div id="caricamento"></div>
+
+    <div class="comandi" id="comandi">
+        <span class="etichetta">Video</span>
+        <button data-vista="nessuno" class="scelto">Solo avatar</button>
+        <button data-vista="lato">A lato</button>
+        <button data-vista="sovrapposto">Sovrapposto</button>
+    </div>
+
+    <div id="pannello">
+        <div id="pannelloMsg">Collegamento alla lezione&hellip;</div>
+        <div class="piccolo" id="pannelloNota"></div>
+        <div class="errore" id="pannelloErr"></div>
+        <div class="riga-codice nascosto" id="rigaCodice">
+            <input id="codice" type="text" autocapitalize="none" autocorrect="off"
+                   spellcheck="false" placeholder="luna-7413">
+            <button id="collega">Entra</button>
+        </div>
+    </div>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.157.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.157.0/examples/jsm/"
+        }
+    }
+    </script>
+    <script>
+    // Come in index.html: se three.js non arriva il modulo non parte mai, e
+    // una pagina nera non spiega niente.
+    window.__ysAvviata = false;
+    setTimeout(function () {
+        if (window.__ysAvviata) { return; }
+        document.getElementById('pannelloMsg').textContent =
+            "La pagina non è partita: le librerie non sono arrivate. Serve una connessione a internet.";
+    }, 9000);
+    </script>
+    <script type="module" src="./js/allievo.js"></script>
+</body>
+</html>

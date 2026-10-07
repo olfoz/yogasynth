@@ -96,6 +96,10 @@ const LIMBS = {
     rightLeg: { bones: ['upperleg_r', 'lowerleg_r', 'foot_r'], joints: ['rKnee', 'rAnkle'] }
 };
 
+// Posa dal vivo: da quale giunto parte ogni catena, e dove finisce il piede.
+const LIVE_ROOT = { leftArm: 'lShoulder', rightArm: 'rShoulder', leftLeg: 'lHip', rightLeg: 'rHip' };
+const LIVE_TOE = { leftLeg: 'lToe', rightLeg: 'rToe' };
+
 // Quanto ogni catena sta fuori dalla linea mediana, in profilo.
 //
 // NON si prende dalla posizione a riposo dell'estremita': il modello e' in
@@ -341,6 +345,21 @@ export class GuideAvatar {
             ...Object.keys(this.limbs).map(k => this.limbs[k].bones)
         ).filter(Boolean);
         if (!this.frameBones.length) this.frameBones = this.bodyBones;
+
+        // Per la posa dal vivo (vedi poseLive): da dove si riparte a ogni
+        // fotogramma, da che parte sta il fianco sinistro del modello, e gli
+        // ossi delle punte dei piedi.
+        this.restQuats = this.bodyBones.map(b => [b, b.quaternion.clone()]);
+        const hl = find(['upperleg_l', 'thigh_l']), hr = find(['upperleg_r', 'thigh_r']);
+        this.restLeft = (hl && hr)
+            ? hl.getWorldPosition(new THREE.Vector3()).sub(hr.getWorldPosition(new THREE.Vector3()))
+            : this.lateral.clone().multiplyScalar(Math.sign(this.restLateral.leftLeg || 1));
+        this.restLeft.y = 0;
+        this.restLeft.normalize();
+        this.toeBones = {
+            leftLeg: find(['ball_l', 'toes_l']),
+            rightLeg: find(['ball_r', 'toes_r'])
+        };
     }
 
     /**
@@ -537,6 +556,96 @@ export class GuideAvatar {
             for (let i = 0; i < 2; i++) {
                 const target = this._worldTarget(tPts, limb.joints[i], profile, limb.lateral);
                 if (target) this._aim(limb.bones[i], limb.bones[i + 1], target);
+            }
+        }
+    }
+
+    /**
+     * Posa dal vivo, in 3D: l'avatar ripete la posizione dell'insegnante
+     * (modalita' libera; la posa la confeziona js/live.js).
+     *
+     * Ogni osso si punta lungo la DIREZIONE del segmento corrispondente, non
+     * verso la posizione del giunto: insegnante e modello non hanno le stesse
+     * proporzioni, e inseguendo i punti un modello dalle spalle piu' larghe
+     * piegherebbe i gomiti per arrivarci.
+     *
+     * Si riparte ogni volta dalla posa di riposo. La rotazione minima con
+     * cui si punta un osso non decide la torsione attorno all'osso stesso:
+     * accumulata un fotogramma dopo l'altro, dopo qualche giro di braccia
+     * l'avambraccio resterebbe attorcigliato. Gli asana dei dati sono pose
+     * ferme e non se ne accorgevano; il movimento dal vivo si'.
+     *
+     * @param {object} live { hip: [x, y], j: { nome: [x, y, z] } } in spazio isotropo
+     */
+    poseLive(live) {
+        if (!this.ready || !live || !live.hip || !live.j) return;
+        const J = live.j;
+        const P = this._livePts || (this._livePts = {});
+        const c = n => J[n] ? (P[n] || (P[n] = new THREE.Vector3())).set(J[n][0], -J[n][1], J[n][2]) : null;
+        const pt = {};
+        for (const n in J) pt[n] = c(n);
+        const mid = (a, b, out) => (pt[a] && pt[b]) ? out.copy(pt[a]).add(pt[b]).multiplyScalar(0.5) : null;
+        const M = this._liveMid || (this._liveMid = [0, 1, 2, 3].map(() => new THREE.Vector3()));
+
+        const hipMid = mid('lHip', 'rHip', M[0]);
+        const shMid = mid('lShoulder', 'rShoulder', M[1]);
+        if (!hipMid || !shMid) return;
+        const torso = hipMid.distanceTo(shMid);
+        if (torso < 1e-4) return;
+
+        for (const [bone, q] of this.restQuats) bone.quaternion.copy(q);
+
+        // scala dal busto, come per gli asana
+        const scale = torso / this.restTorso;
+        this.rig.scale.setScalar(scale);
+        this._scale = scale;
+
+        // da che parte e' girato: il bacino. Se la linea delle anche e' quasi
+        // verticale (sdraiati su un fianco) non lo dice, e si tiene l'ultima.
+        const left = this._f.copy(pt.lHip).sub(pt.rHip);
+        left.y = 0;
+        if (left.length() > 0.2 * torso) {
+            this._liveYaw = Math.atan2(left.x, left.z) - Math.atan2(this.restLeft.x, this.restLeft.z);
+        }
+        this.rig.rotation.set(0, this._liveYaw || 0, 0);
+
+        // il bacino sul bacino dell'insegnante, a profondita' zero
+        const hipWorld = M[2].set(live.hip[0], 1 - live.hip[1], 0);
+        const placeHip = () => {
+            this.rig.updateMatrixWorld(true);
+            const now = this._hipJointWorld(this._v);
+            this.rig.position.x += hipWorld.x - now.x;
+            this.rig.position.y += hipWorld.y - now.y;
+            this.rig.position.z += hipWorld.z - now.z;
+            this.rig.updateMatrixWorld(true);
+        };
+        this.rig.position.set(0, 0, 0);
+        placeHip();
+
+        // il tronco intero, poi di nuovo il bacino: ruotando attorno alla
+        // radice, che sta sopra le anche, le anche si spostano un poco
+        this._aimVector(this.hipBone, this._shoulderJointWorld(this._b), this._f.copy(shMid).sub(hipMid));
+        placeHip();
+
+        // la testa va verso le orecchie; il naso, se le orecchie non si vedono
+        const headPt = mid('lEar', 'rEar', M[3]) || pt.nose;
+        if (headPt && this.neckBone && this.headBone) {
+            this._aimVector(this.neckBone, this.headBone.getWorldPosition(this._b), this._f.copy(headPt).sub(shMid));
+        }
+
+        this.skinnedMesh.updateMatrixWorld(true);
+        for (const key in this.limbs) {
+            const limb = this.limbs[key];
+            const chain = [LIVE_ROOT[key]].concat(limb.joints);
+            for (let i = 0; i < 2; i++) {
+                const a = pt[chain[i]], b = pt[chain[i + 1]];
+                if (!a || !b) continue;
+                this._aimVector(limb.bones[i], limb.bones[i + 1].getWorldPosition(this._b), this._f.copy(b).sub(a));
+            }
+            const toe = this.toeBones[key];
+            const ankle = pt[limb.joints[1]], tip = pt[LIVE_TOE[key]];
+            if (toe && ankle && tip) {
+                this._aimVector(limb.bones[2], toe.getWorldPosition(this._b), this._f.copy(tip).sub(ankle));
             }
         }
     }

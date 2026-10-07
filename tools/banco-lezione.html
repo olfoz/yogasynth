@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<title>banco di prova — lezione</title>
+<style>
+    body { font: 13px/1.6 ui-monospace, Menlo, monospace; background: #0b0d16; color: #ddd; margin: 0; padding: 16px; }
+    pre { white-space: pre-wrap; }
+    iframe { width: 640px; height: 400px; border: 1px solid #333; margin-top: 12px; }
+</style>
+</head>
+<body>
+<pre id="o">avvio…</pre>
+<div id="cornice"></div>
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.157.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.157.0/examples/jsm/"}}
+</script>
+<script type="module">
+/*
+ * La modalita' libera e la lezione, dall'avatar fino alla pagina degli
+ * allievi.
+ *
+ *  1. POSA DAL VIVO. Pose sintetiche note, nel formato di MediaPipe, passano
+ *     da LiveSender a GuideAvatar.poseLive. Si controlla che ogni osso
+ *     punti dove deve, e soprattutto il verso: l'avatar deve essere
+ *     l'immagine ALLO SPECCHIO dell'insegnante e guardare la telecamera.
+ *     Un errore di segno qui non lo vede nessun confronto avatar-dati,
+ *     perche' l'avatar seguirebbe benissimo dati sbagliati.
+ *  2. PROTOCOLLO. Una Lezione vera e un allievo finto, sul collegamento
+ *     diretto: arrivano le pose? il video parte solo a chi lo chiede, e si
+ *     ferma quando non lo vuole piu'?
+ *  3. PAGINA ALLIEVO. lezione.html in un iframe, con questo banco nel ruolo
+ *     dell'insegnante.
+ *
+ * Le parti 2 e 3 vogliono internet (servizio di incontro PeerJS).
+ *
+ *   chrome --headless=new --virtual-time-budget=90000 --dump-dom
+ *          http://127.0.0.1:8941/tools/banco-lezione.html
+ */
+const L = [];
+// Oltre che sulla pagina, l'esito va al ponte di tools/serve.py: Chrome
+// headless non fa WebRTC, quindi questa prova gira in un browser vero, e da
+// li' il risultato si legge con `curl http://127.0.0.1:8941/live/state`.
+const out = () => {
+    document.getElementById('o').textContent = L.join('\n');
+    fetch('../live/state', { method: 'POST', body: JSON.stringify({ banco: 'lezione', righe: L }) }).catch(() => {});
+};
+let falliti = 0;
+const prova = (nome, ok, dettaglio) => {
+    if (!ok) falliti++;
+    L.push((ok ? 'ok    ' : 'FALLITO ') + nome + (dettaglio ? '   (' + dettaglio + ')' : ''));
+    out();
+};
+window.onerror = e => { L.push('ERRORE ' + e); falliti++; out(); };
+const attendi = ms => new Promise(r => setTimeout(r, ms));
+async function finche(cond, ms) {
+    const t0 = performance.now();
+    while (performance.now() - t0 < ms) { if (cond()) return true; await attendi(100); }
+    return cond();
+}
+
+const THREE = await import('three');
+const v = '?v=' + Date.now();
+const { GuideAvatar } = await import('../js/render/avatar.js' + v);
+const { LiveSender } = await import('../js/live.js' + v);
+const { Lezione, SITO_PUBBLICO } = await import('../js/lezione.js' + v);
+
+// ─── pose sintetiche ────────────────────────────────────────────────────
+// Convenzioni di MediaPipe: x verso destra NELL'IMMAGINE, y in basso, z
+// negativa verso la telecamera. Chi guarda la telecamera ha il fianco
+// sinistro a destra dell'immagine.
+const ASPECT = 4 / 3;
+const K = 0.45;   // frazione di fotogramma per metro
+
+function posa(giunti) {
+    const base = {
+        0: [0, -0.68, -0.08], 7: [0.07, -0.66, 0], 8: [-0.07, -0.66, 0],
+        11: [0.18, -0.5, 0], 12: [-0.18, -0.5, 0],
+        13: [0.2, -0.22, 0], 14: [-0.2, -0.22, 0],
+        15: [0.2, 0.03, 0], 16: [-0.2, 0.03, 0],
+        23: [0.1, 0, 0], 24: [-0.1, 0, 0],
+        25: [0.1, 0.42, 0], 26: [-0.1, 0.42, 0],
+        27: [0.1, 0.84, 0], 28: [-0.1, 0.84, 0],
+        31: [0.1, 0.88, -0.12], 32: [-0.1, 0.88, -0.12]
+    };
+    Object.assign(base, giunti);
+    const world = [], lm = [];
+    for (let i = 0; i < 33; i++) {
+        const p = base[i];
+        if (!p) { world.push({ x: 0, y: 0, z: 0, visibility: 0 }); lm.push({ x: 0, y: 0, z: 0, visibility: 0 }); continue; }
+        world.push({ x: p[0], y: p[1], z: p[2], visibility: 0.99 });
+        // proiezione ortografica, bacino a 0.55,0.5 del fotogramma
+        lm.push({ x: 0.55 + (p[0] * K) / ASPECT, y: 0.5 + p[1] * K, z: 0, visibility: 0.99 });
+    }
+    return { world, lm };
+}
+
+const POSE = {
+    'in piedi, braccia lungo i fianchi': posa({}),
+    "braccio destro dell'insegnante alzato": posa({ 14: [-0.2, -0.78, 0], 16: [-0.2, -1.05, 0] }),
+    'braccia tese verso la telecamera': posa({
+        13: [0.18, -0.5, -0.28], 14: [-0.18, -0.5, -0.28],
+        15: [0.18, -0.5, -0.56], 16: [-0.18, -0.5, -0.56]
+    }),
+    // di profilo, la faccia verso destra dell'immagine: il fianco sinistro
+    // e' quello lontano dalla telecamera (z positiva)
+    'di profilo, piegato in avanti': posa({
+        23: [0, 0, 0.1], 24: [0, 0, -0.1],
+        11: [0.48, -0.12, 0.18], 12: [0.48, -0.12, -0.18],
+        0: [0.68, -0.05, 0], 7: [0.62, -0.12, 0.07], 8: [0.62, -0.12, -0.07],
+        13: [0.55, 0.15, 0.18], 14: [0.55, 0.15, -0.18],
+        15: [0.5, 0.4, 0.18], 16: [0.5, 0.4, -0.18],
+        25: [0.02, 0.42, 0.1], 26: [0.02, 0.42, -0.1],
+        27: [0, 0.84, 0.1], 28: [0, 0.84, -0.1],
+        31: [0.14, 0.88, 0.1], 32: [0.14, 0.88, -0.1]
+    })
+};
+
+// ─── 1. POSA DAL VIVO ───────────────────────────────────────────────────
+L.push('1. POSA DAL VIVO'); out();
+const scene = new THREE.Scene();
+const av = new GuideAvatar(scene);
+await av.load('../avatars/nathan.fbx');
+prova('avatar caricato, posa di riposo memorizzata', av.ready && av.restQuats.length > 20,
+    av.restQuats.length + ' ossa');
+
+const wp = b => b.getWorldPosition(new THREE.Vector3());
+const isoToWorld = a => new THREE.Vector3(a[0], -a[1], a[2]);
+
+function posaAvatar(p) {
+    const s = new LiveSender();
+    let live = null;
+    for (let i = 0; i < 40; i++) live = s.pack(p.world, p.lm, ASPECT);   // scala a regime
+    av.poseLive(live);
+    scene.updateMatrixWorld(true);
+    return live;
+}
+
+for (const nome in POSE) {
+    const live = posaAvatar(POSE[nome]);
+    const J = live.j;
+    // ogni osso lungo il suo segmento
+    let peggiore = 1, dove = '';
+    const confronta = (etichetta, a, b, da, a2) => {
+        const atteso = isoToWorld(J[a2]).sub(isoToWorld(J[da])).normalize();
+        const avuto = wp(b).sub(wp(a)).normalize();
+        const d = atteso.dot(avuto);
+        if (d < peggiore) { peggiore = d; dove = etichetta; }
+    };
+    const LIMB = { leftArm: ['lShoulder', 'lElbow', 'lWrist'], rightArm: ['rShoulder', 'rElbow', 'rWrist'],
+                   leftLeg: ['lHip', 'lKnee', 'lAnkle'], rightLeg: ['rHip', 'rKnee', 'rAnkle'] };
+    for (const k in av.limbs) {
+        const b = av.limbs[k].bones, j = LIMB[k];
+        confronta(k + '.1', b[0], b[1], j[0], j[1]);
+        confronta(k + '.2', b[1], b[2], j[1], j[2]);
+    }
+    // tronco: dal punto medio delle anche a quello delle spalle
+    {
+        const mid = (a, b) => isoToWorld(J[a]).add(isoToWorld(J[b])).multiplyScalar(0.5);
+        const atteso = mid('lShoulder', 'rShoulder').sub(mid('lHip', 'rHip')).normalize();
+        const avuto = av._shoulderJointWorld(new THREE.Vector3()).sub(av._hipJointWorld(new THREE.Vector3())).normalize();
+        const d = atteso.dot(avuto);
+        if (d < peggiore) { peggiore = d; dove = 'tronco'; }
+    }
+    prova(nome + ': ogni osso lungo il suo segmento', peggiore > 0.98,
+        'peggiore ' + dove + ' cos=' + peggiore.toFixed(4));
+
+    const anca = av._hipJointWorld(new THREE.Vector3());
+    prova(nome + ': bacino sul bacino', Math.hypot(anca.x - live.hip[0], anca.y - (1 - live.hip[1])) < 1e-3);
+}
+
+// versi: questi sono i controlli che contano
+{
+    posaAvatar(POSE['in piedi, braccia lungo i fianchi']);
+    const avanti = av.forward.clone().applyQuaternion(av.rig.quaternion);
+    prova('di fronte: l’avatar guarda la telecamera', avanti.z > 0.95, 'avanti=' + avanti.toArray().map(x => x.toFixed(2)));
+    const anca = av._hipJointWorld(new THREE.Vector3());
+    const manoS = wp(av.limbs.leftArm.bones[2]), manoD = wp(av.limbs.rightArm.bones[2]);
+    prova('di fronte: la sua sinistra sta a destra di chi guarda', manoS.x > anca.x && manoD.x < anca.x);
+}
+{
+    posaAvatar(POSE["braccio destro dell'insegnante alzato"]);
+    const sp = wp(av.limbs.leftArm.bones[0]);
+    const mano = wp(av.limbs.leftArm.bones[2]);
+    const anca = av._hipJointWorld(new THREE.Vector3());
+    // la destra dell'insegnante, nello specchio, sta a destra dello schermo:
+    // l'avatar la ripete alzando la sua sinistra, che e' da quella parte
+    prova("specchio: alza la destra l'insegnante, l'avatar alza la sinistra, a destra dello schermo",
+        mano.y > sp.y + 0.1 * av._scale * av.restTorso && mano.x > anca.x);
+    const altra = wp(av.limbs.rightArm.bones[2]);
+    prova("specchio: l'altra mano resta giu'", altra.y < anca.y + 0.3 * av._scale * av.restTorso);
+}
+{
+    posaAvatar(POSE['braccia tese verso la telecamera']);
+    const sp = wp(av.limbs.leftArm.bones[0]);
+    const mano = wp(av.limbs.leftArm.bones[2]);
+    const t = av._scale * av.restTorso;
+    prova('profondita: le mani vengono verso chi guarda', mano.z - sp.z > 0.8 * t,
+        'dz=' + ((mano.z - sp.z) / t).toFixed(2) + ' busti');
+}
+{
+    posaAvatar(POSE['di profilo, piegato in avanti']);
+    const anca = av._hipJointWorld(new THREE.Vector3());
+    const spalle = av._shoulderJointWorld(new THREE.Vector3());
+    // si piega verso destra dell'immagine, quindi a sinistra dello schermo
+    prova('profilo: si piega dalla parte dello specchio', spalle.x < anca.x - 0.5 * av._scale * av.restTorso);
+    const avanti = av.forward.clone().applyQuaternion(av.rig.quaternion);
+    prova('profilo: il bacino guarda di lato', Math.abs(avanti.x) > 0.95, 'avanti=' + avanti.toArray().map(x => x.toFixed(2)));
+}
+
+// niente torsione accumulata: cento giri di braccia e si torna allo
+// stesso identico punto di una posa fatta da capo
+{
+    const s = new LiveSender();
+    const quiete = POSE['in piedi, braccia lungo i fianchi'];
+    for (let i = 0; i < 40; i++) s.pack(quiete.world, quiete.lm, ASPECT);
+    for (let f = 0; f < 600; f++) {
+        const a = (f / 30) * Math.PI;
+        const p = posa({
+            13: [0.18 + 0.28 * Math.cos(a), -0.5 + 0.28 * Math.sin(a), 0.1 * Math.sin(a * 0.7)],
+            15: [0.18 + 0.56 * Math.cos(a), -0.5 + 0.56 * Math.sin(a), 0.2 * Math.sin(a * 0.7)]
+        });
+        av.poseLive(s.pack(p.world, p.lm, ASPECT));
+    }
+    av.poseLive(s.pack(quiete.world, quiete.lm, ASPECT));
+    const dopo = av.limbs.leftArm.bones.map(b => b.quaternion.clone());
+    const fresco = new LiveSender();
+    let live;
+    for (let i = 0; i < 40; i++) live = fresco.pack(quiete.world, quiete.lm, ASPECT);
+    av.poseLive(live);
+    const scarto = Math.max(...av.limbs.leftArm.bones.map((b, i) => b.quaternion.angleTo(dopo[i])));
+    prova('600 fotogrammi di cerchi con le braccia: nessuna torsione accumulata', scarto < 1e-3,
+        'scarto ' + (scarto * 180 / Math.PI).toFixed(3) + '°');
+}
+
+// ─── 2. PROTOCOLLO ──────────────────────────────────────────────────────
+L.push(''); L.push('2. PROTOCOLLO'); out();
+prova('da localhost il link porta al sito pubblicato', Lezione.link('luna-1234') === SITO_PUBBLICO + 'lezione.html#luna-1234',
+    Lezione.link('luna-1234'));
+
+// webcam finta: un canvas che si muove
+const tela = document.createElement('canvas');
+tela.width = 320; tela.height = 240;
+const g = tela.getContext('2d');
+setInterval(() => {
+    g.fillStyle = '#123'; g.fillRect(0, 0, 320, 240);
+    g.fillStyle = '#7C4DFF'; g.fillRect((Date.now() / 10) % 300, 100, 20, 40);
+}, 50);
+const webcam = tela.captureStream(15);
+
+let ultimoCambio = null;
+const lezione = new Lezione(c => { ultimoCambio = c; });
+const link = await lezione.apri();
+prova('la lezione si apre sul servizio di incontro', !!link, link || (ultimoCambio && ultimoCambio.dettaglio));
+if (!link) {
+    L.push(''); L.push(falliti ? falliti + ' PROVE FALLITE' : 'TUTTO BENE'); out();
+    throw new Error('senza servizio di incontro le parti 2 e 3 non si possono fare');
+}
+await finche(() => lezione.host.peer && lezione.host.peer.open, 8000);
+lezione.setStream(webcam);
+
+const quiete = POSE['in piedi, braccia lungo i fianchi'];
+const mittente = new LiveSender();
+const trasmetti = setInterval(() => {
+    lezione.send({
+        t: Date.now(), modo: 'lezione', aspect: ASPECT,
+        body: { lHip: [0.6, 0.5], rHip: [0.5, 0.5], lShoulder: [0.62, 0.28], rShoulder: [0.48, 0.28], nose: [0.55, 0.2] },
+        live: mittente.pack(quiete.world, quiete.lm, ASPECT),
+        video: lezione.videoDisponibile
+    });
+}, 50);
+
+{
+    const { caricaPeerJS, caricaIce } = await import('../js/peer.js' + v);
+    const Peer = await caricaPeerJS();
+    const allievo = new Peer(null, { debug: 0, config: await caricaIce() });
+    await finche(() => allievo.open, 8000);
+    const conn = allievo.connect('yogasynth-lezione-' + lezione.codice, { reliable: false, serialization: 'json' });
+    let ricevuti = 0, ultimo = null, flusso = null, chiamate = 0;
+    conn.on('data', d => { ricevuti++; ultimo = d; });
+    allievo.on('call', c => { chiamate++; c.answer(); c.on('stream', s => { flusso = s; }); });
+    await finche(() => conn.open, 10000);
+    prova("l'allievo si collega", conn.open);
+    conn.send({ tipo: 'video', vuole: false });
+
+    await finche(() => ricevuti > 5, 5000);
+    prova("arrivano le pose dell'insegnante", ricevuti > 5 && ultimo && ultimo.modo === 'lezione' && !!ultimo.live,
+        ricevuti + ' messaggi, ' + JSON.stringify(ultimo).length + ' byte');
+    prova('al ritmo previsto (circa 20 al secondo)', await (async () => {
+        const a = ricevuti; await attendi(2000); const hz = (ricevuti - a) / 2; L.push('      ' + hz + ' Hz'); return hz > 12 && hz < 24;
+    })());
+    prova("l'insegnante conta un allievo", lezione.collegati === 1);
+
+    lezione.setVideo(true);
+    await attendi(1500);
+    prova('video acceso, ma chi non lo chiede non lo riceve', chiamate === 0 && !flusso);
+
+    conn.send({ tipo: 'video', vuole: true });
+    await finche(() => flusso && flusso.getVideoTracks().length, 12000);
+    prova('chi lo chiede riceve il video', !!flusso && flusso.getVideoTracks().length === 1);
+    prova("e lo stato lo dice: video disponibile", ultimo && ultimo.video === true);
+
+    conn.send({ tipo: 'video', vuole: false });
+    await finche(() => { const a = [...lezione.allievi.values()][0]; return a && !a.chiamata; }, 4000);
+    prova("smette di volerlo: l'insegnante chiude il video", [...lezione.allievi.values()].every(a => !a.chiamata));
+
+    conn.close();
+    await finche(() => lezione.collegati === 0, 6000);
+    prova("l'allievo esce, l'insegnante lo vede", lezione.collegati === 0);
+    allievo.destroy();
+}
+
+// ─── 3. PAGINA ALLIEVO ──────────────────────────────────────────────────
+L.push(''); L.push('3. PAGINA ALLIEVO (lezione.html in un iframe)'); out();
+{
+    // la pagina ricorda la scelta dell'allievo: si parte da pulito
+    try { localStorage.removeItem('yogasynth.vistaLezione'); } catch (e) { /* non disponibile */ }
+    const f = document.createElement('iframe');
+    f.src = '../lezione.html' + v + '#' + lezione.codice;
+    document.getElementById('cornice').appendChild(f);
+    const doc = () => f.contentDocument;
+    const testo = id => (doc() && doc().getElementById(id) ? doc().getElementById(id).textContent : '');
+
+    await finche(() => /dal vivo/.test(testo('stato')), 20000);
+    prova('si collega da sola dal codice nell’indirizzo e va in diretta', /dal vivo/.test(testo('stato')), testo('stato'));
+    prova('il pannello di attesa sparisce', doc().getElementById('pannello').classList.contains('nascosto'));
+    prova('si parte con il solo avatar', doc().body.className === 'vista-nessuno');
+
+    await finche(() => testo('caricamento') === '', 30000);
+    prova("l'avatar arriva e si posa", testo('caricamento') === '', testo('caricamento') || 'caricato');
+
+    // l'allievo sceglie "a lato"
+    doc().querySelector('#comandi button[data-vista="lato"]').click();
+    await finche(() => doc().body.className === 'vista-lato', 15000);
+    prova('sceglie il video a lato e lo vede a lato', doc().body.className === 'vista-lato', doc().body.className);
+    const vid = doc().getElementById('video');
+    await finche(() => vid.videoWidth > 0, 5000);
+    prova('il video gira', vid.videoWidth > 0, vid.videoWidth + 'x' + vid.videoHeight);
+
+    doc().querySelector('#comandi button[data-vista="sovrapposto"]').click();
+    await attendi(400);
+    prova('sovrapposto: il video passa dietro all’avatar', doc().body.className === 'vista-sovrapposto');
+
+    // l'insegnante spegne il video: si torna all'avatar, la scelta resta
+    lezione.setVideo(false);
+    await finche(() => doc().body.className === 'vista-nessuno', 6000);
+    prova("l'insegnante spegne il video: torna il solo avatar", doc().body.className === 'vista-nessuno');
+    prova('…e la scelta dell’allievo resta segnata', doc().querySelector('#comandi button.scelto').dataset.vista === 'sovrapposto');
+
+    // l'insegnante smette di trasmettere
+    clearInterval(trasmetti);
+    await finche(() => /in pausa/.test(testo('stato')), 8000);
+    prova('se l’insegnante si ferma, la pagina dice che e’ in pausa', /in pausa/.test(testo('stato')), testo('stato'));
+}
+
+lezione.chiudi();
+L.push('');
+L.push(falliti ? falliti + ' PROVE FALLITE' : 'TUTTO BENE');
+out();
+</script>
+</body>
+</html>
